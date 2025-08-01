@@ -31,6 +31,7 @@ import requestReducer from './request';
 import thunk from 'redux-thunk';
 import toolbarReducer from './toolbar';
 import floatingToolsReducer from './floatingTools';
+import aiAssistantReducer from './aiAssistant';
 
 export { onAction, load };
 
@@ -50,6 +51,7 @@ const shared = combineReducers({
   saltsAndSolvents: saltsAndSolventsReducer,
   requestsStatuses: requestReducer,
   floatingTools: floatingToolsReducer,
+  aiAssistant: aiAssistantReducer,
 });
 
 function getRootReducer(setEditor) {

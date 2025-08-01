@@ -37,6 +37,7 @@ import { useAppContext, useSubscriptionOnEvents } from '../../../hooks';
 import { AbbreviationLookupContainer } from '../dialog/AbbreviationLookup';
 import { initLib } from '../state/templates/init-lib';
 import { ketcherProvider } from 'ketcher-core';
+import { AIAssistantPanelContainer } from '../views/AIAssistant/AIAssistantPanel.container';
 
 interface AppCallProps {
   checkServer: () => void;
@@ -108,6 +109,7 @@ const App = (props: Props) => {
         <AppClipArea />
         <AppModalContainer ketcherId={ketcherId} />
         <AbbreviationLookupContainer />
+        <AIAssistantPanelContainer />
       </div>
     </ThemeProvider>
   );

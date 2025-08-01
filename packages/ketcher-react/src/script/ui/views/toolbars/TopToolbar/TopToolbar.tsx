@@ -39,6 +39,7 @@ export interface PanelProps {
   indigoVerification: boolean;
   hiddenButtons: string[];
   shortcuts: { [key in string]: string };
+  onAIAssistant: VoidFunction;
   onClear: VoidFunction;
   onFileOpen: VoidFunction;
   onSave: VoidFunction;
@@ -126,6 +127,7 @@ export const TopToolbar = ({
   indigoVerification,
   hiddenButtons,
   shortcuts,
+  onAIAssistant,
   onClear,
   onFileOpen,
   onSave,
@@ -184,6 +186,15 @@ export const TopToolbar = ({
       data-testid="top-toolbar"
     >
       <BtnsWpapper>
+        <TopToolbarIconButton
+          title="AI Assistant"
+          onClick={onAIAssistant}
+          iconName="ai-assistant"
+          shortcut={shortcuts.aiAssistant}
+          isHidden={hiddenButtons.includes('ai-assistant')}
+          disabled={disabledButtons.includes('ai-assistant')}
+          testId="ai-assistant"
+        />
         <TopToolbarIconButton
           title="Clear Canvas"
           onClick={onClear}

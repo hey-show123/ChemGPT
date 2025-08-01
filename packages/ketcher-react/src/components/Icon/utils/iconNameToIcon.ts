@@ -16,6 +16,7 @@
 
 import AboutIcon from '../../../assets/icons/files/about.svg';
 import AddImageIcon from '../../../assets/icons/files/add-image.svg';
+import AIAssistantIcon from '../../../assets/icons/files/ai-assistant.svg';
 import AnalyseIcon from '../../../assets/icons/files/analyse.svg';
 import AromIcon from '../../../assets/icons/files/arom.svg';
 import ArrowUpwardIcon from '../../../assets/icons/files/arrow-upward.svg';
@@ -285,6 +286,7 @@ export const iconNameToIcon = {
   '≥': MoreOrEqualIcon,
   '℉': DegreeFahreinheitIcon,
   '℃': DegreeCelseusIcon,
+  'ai-assistant': AIAssistantIcon,
   about: AboutIcon,
   analyse: AnalyseIcon,
   'any-atom': AnyAtomIcon,

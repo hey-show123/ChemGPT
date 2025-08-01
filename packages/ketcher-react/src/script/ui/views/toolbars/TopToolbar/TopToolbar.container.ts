@@ -23,6 +23,7 @@ import action from 'src/script/ui/action/index';
 import { generateMenuShortcuts } from 'ketcher-core';
 import { removeStructAction } from 'src/script/ui/state/shared';
 import { createSelector } from 'reselect';
+import { toggleAIAssistant } from 'src/script/ui/state/aiAssistant';
 
 const getActionState = (state) => state.actionState || {};
 
@@ -82,6 +83,7 @@ const mapDispatchToProps = (dispatch: Dispatch) => {
   };
 
   return {
+    onAIAssistant: () => dispatch(toggleAIAssistant()),
     onClear: () => dispatchAction('clear'),
     onFileOpen: () => dispatchAction('open'),
     onSave: () => {
