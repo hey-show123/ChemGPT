@@ -5,8 +5,10 @@ import cleanup from 'rollup-plugin-cleanup';
 import commonjs from '@rollup/plugin-commonjs';
 import copy from 'rollup-plugin-copy';
 import del from 'rollup-plugin-delete';
+import fs from 'fs';
 import json from '@rollup/plugin-json';
 import nodeResolve from '@rollup/plugin-node-resolve';
+import path from 'path';
 import peerDepsExternal from 'rollup-plugin-peer-deps-external';
 import pkg from './package.json';
 import postcss from 'rollup-plugin-postcss';
@@ -35,6 +37,30 @@ const getTagName = () => {
   }
 };
 
+// Load environment variables from .env file
+
+const loadEnvFile = () => {
+  const envPath = path.resolve('.env');
+  const envVars = {};
+
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split('\n').forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          envVars[key.trim()] = valueParts.join('=').trim();
+        }
+      }
+    });
+  }
+
+  return envVars;
+};
+
+const envVars = loadEnvFile();
+
 export const valuesToReplace = {
   'process.env.NODE_ENV': JSON.stringify(
     isProduction ? mode.PRODUCTION : mode.DEVELOPMENT,
@@ -46,6 +72,11 @@ export const valuesToReplace = {
   // TODO: add logic to init BUILD_NUMBER
   'process.env.BUILD_NUMBER': JSON.stringify(undefined),
   'process.env.HELP_LINK': JSON.stringify(getTagName()),
+  // Add environment variables from .env file
+  ...Object.keys(envVars).reduce((acc, key) => {
+    acc[`process.env.${key}`] = JSON.stringify(envVars[key]);
+    return acc;
+  }, {}),
 };
 
 const config = {
