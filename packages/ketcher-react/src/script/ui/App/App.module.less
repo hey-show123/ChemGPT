@@ -20,10 +20,10 @@
   position: relative;
   display: grid;
   grid-template-areas:
-    'toolbar-top toolbar-top toolbar-top'
-    'toolbar-left canvas toolbar-right'
-    'toolbar-bottom toolbar-bottom toolbar-bottom';
-  grid-template-columns: minmax(36px, max-content) 1fr minmax(36px, max-content);
+    'toolbar-top toolbar-top toolbar-top toolbar-top toolbar-top'
+    'canvas canvas toolbar-right toolbar-left toolbar-left'
+    'canvas canvas toolbar-right toolbar-bottom toolbar-bottom';
+  grid-template-columns: 1fr auto minmax(36px, max-content) minmax(36px, max-content) 0;
   grid-template-rows: auto 1fr auto;
   /* stylelint-disable-next-line */
   container-type: size;
