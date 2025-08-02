@@ -148,22 +148,9 @@ export class AIService {
 
   private constructor() {
     // デフォルトモデル設定
-    console.log('AIService constructor - Environment variables:', {
-      REACT_APP_DEFAULT_AI_MODEL: process.env.REACT_APP_DEFAULT_AI_MODEL,
-      REACT_APP_USE_MOCK_AI: process.env.REACT_APP_USE_MOCK_AI,
-      REACT_APP_OPENAI_API_KEY: process.env.REACT_APP_OPENAI_API_KEY
-        ? 'SET'
-        : 'NOT SET',
-      NODE_ENV: process.env.NODE_ENV,
-      allEnvVars: Object.keys(process.env).filter((key) =>
-        key.startsWith('REACT_APP_'),
-      ),
-    });
-
     const defaultModel =
       (process.env.REACT_APP_DEFAULT_AI_MODEL as AIModel) || 'gpt-3.5-turbo';
     this.currentModel = defaultModel;
-    console.log('AIService initialized with model:', this.currentModel);
   }
 
   public static getInstance(): AIService {
@@ -226,12 +213,10 @@ export class AIService {
    */
   async generateStructure(prompt: string): Promise<AIResponse> {
     try {
-      console.log('AIService.generateStructure called with prompt:', prompt);
       const response = await this.callAI({
         type: 'generate_structure',
         prompt,
       });
-      console.log('AIService.generateStructure response:', response);
 
       return this.parseAIResponse(response);
     } catch (error) {
@@ -309,18 +294,8 @@ export class AIService {
       // 環境変数でモック使用を制御
       const useMock = String(process.env.REACT_APP_USE_MOCK_AI) === 'true';
 
-      console.log('AIService.callAI - decision:', {
-        useMock,
-        payload,
-        env: process.env.NODE_ENV,
-        REACT_APP_USE_MOCK_AI: process.env.REACT_APP_USE_MOCK_AI,
-      });
-
       if (useMock) {
-        console.log('AIService.callAI - Using mock AI response');
-        const mockResult = await this.getMockResponse(payload);
-        console.log('AIService.callAI - Mock result:', mockResult);
-        return mockResult;
+        return await this.getMockResponse(payload);
       }
 
       console.log('AIService.callAI - Using real API');
@@ -970,24 +945,12 @@ SMILES: 化合物名: 構造式
    * AI応答のパース
    */
   private parseAIResponse(response: Record<string, unknown>): AIResponse {
-    console.log('parseAIResponse called with:', response);
-    console.log('response.structures:', response.structures);
-    console.log('response.structures type:', typeof response.structures);
-    console.log(
-      'response.structures is array:',
-      Array.isArray(response.structures),
-    );
-
     const result = {
       message: (response.message as string) || '',
       structures: (response.structures as ChemicalStructure[]) || [],
       suggestions: (response.suggestions as string[]) || [],
       success: true,
     };
-
-    console.log('parseAIResponse result:', result);
-    console.log('result.structures:', result.structures);
-    console.log('result.structures length:', result.structures?.length);
 
     return result;
   }

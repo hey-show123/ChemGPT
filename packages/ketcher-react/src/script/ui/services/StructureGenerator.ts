@@ -33,7 +33,6 @@ export class StructureGenerator {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(dispatch?: (action: any) => void) {
-    console.log('StructureGenerator created with Ketcher integration');
     this.dispatch = dispatch;
   }
 
@@ -47,9 +46,7 @@ export class StructureGenerator {
 
   private getKetcherInstance() {
     try {
-      // 毎回最新のKetcherインスタンスを取得
       const ketcher = ketcherProvider.getKetcher();
-      console.log('Ketcher instance obtained:', !!ketcher);
       return ketcher;
     } catch (error) {
       console.error('Failed to get Ketcher instance:', error);
@@ -65,8 +62,6 @@ export class StructureGenerator {
   async addStructuresToCanvas(
     structures: ChemicalStructure[],
   ): Promise<StructureGenerationResult> {
-    console.log('addStructuresToCanvas called with structures:', structures);
-
     if (!structures || structures.length === 0) {
       return { success: true, addedStructures: 0 };
     }
@@ -75,15 +70,9 @@ export class StructureGenerator {
       let addedCount = 0;
 
       for (const structure of structures) {
-        console.log(`Adding structure: ${structure.label || 'Unnamed'}`, {
-          format: structure.format,
-          data: structure.data,
-        });
-
         try {
           // フォーマットからMIMEタイプへの変換（Open.tsxと同じ）
           const inputFormat = this.getFormatMimeType(structure.format);
-          console.log(`Using format: ${inputFormat}`);
 
           // Open StructureのcopyHandlerと完全に同じロジック
           // 1. exec('copy')を実行してクリップボードを有効化
