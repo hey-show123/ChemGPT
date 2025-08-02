@@ -87,6 +87,7 @@ export class StructureGenerator {
           // Open StructureのcopyHandlerと完全に同じロジック
           // load(structStr, { fragment: true, 'input-format': format })
           // loadは文字列を受け取り、thunk関数を返す
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const loadAction = load(structure.data as unknown as any, {
             fragment: true,
             'input-format': inputFormat,
@@ -163,6 +164,7 @@ export class StructureGenerator {
       if (!ketcher) return;
 
       // pasteツールのアクションを実行
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const editor = (ketcher as unknown as any).editor;
       if (editor && action.opts) {
         console.log('Executing paste action with opts:', action.opts);
@@ -199,6 +201,7 @@ export class StructureGenerator {
 
     try {
       // 現在の構造をKET形式で取得
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ketPromise = (ketcher as unknown as any).getKet();
       console.log('Retrieved KET structure promise:', ketPromise);
 
