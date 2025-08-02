@@ -100,9 +100,6 @@ export class StructureGenerator {
           this.dispatch(loadAction);
 
           addedCount++;
-          console.log(
-            `Successfully activated paste tool for: ${structure.label}`,
-          );
         } catch (structError) {
           console.error(
             `Failed to add structure ${structure.label}:`,
@@ -146,8 +143,6 @@ export class StructureGenerator {
    * AI分析のために使用
    */
   getCurrentStructureAsKet(): string | null {
-    console.log('getCurrentStructureAsKet called');
-
     const ketcher = this.getKetcherInstance();
     if (!ketcher) {
       console.error('Ketcher instance not available');
@@ -158,17 +153,14 @@ export class StructureGenerator {
       // 現在の構造をKET形式で取得
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ketPromise = (ketcher as unknown as any).getKet();
-      console.log('Retrieved KET structure promise:', ketPromise);
 
       // getKetは非同期の場合があるので適切に処理
       if (ketPromise && typeof ketPromise.then === 'function') {
         // Promiseの場合は同期処理では扱えないため、ここでは null を返す
-        console.log('getKet returned a Promise, cannot handle synchronously');
         return null;
       }
 
       const ketString = ketPromise as string;
-      console.log('Retrieved KET structure:', ketString ? 'success' : 'empty');
       return ketString || null;
     } catch (error) {
       console.error('Error getting current structure:', error);

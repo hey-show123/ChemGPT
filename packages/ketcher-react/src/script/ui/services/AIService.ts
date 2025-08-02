@@ -289,8 +289,6 @@ export class AIService {
     payload: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     try {
-      console.log('AIService.callAI START - payload:', payload);
-
       // 環境変数でモック使用を制御
       const useMock = String(process.env.REACT_APP_USE_MOCK_AI) === 'true';
 
@@ -298,7 +296,6 @@ export class AIService {
         return await this.getMockResponse(payload);
       }
 
-      console.log('AIService.callAI - Using real API');
       const modelConfig = this.getCurrentModelConfig();
       const apiKey = this.getApiKey(modelConfig.provider);
 
@@ -313,19 +310,12 @@ export class AIService {
         payload,
       );
 
-      console.log('Making API request to:', endpoint);
-      console.log('Request headers:', headers);
-      console.log('Request body:', JSON.stringify(body, null, 2));
-
       const response = await fetch(endpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
         mode: 'cors',
       });
-
-      console.log('API response status:', response.status);
-      console.log('API response headers:', response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -775,42 +765,28 @@ SMILES: 化合物名: 構造式
   private getMockResponse(
     payload: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    console.log('AIService.getMockResponse START - payload:', payload);
     return new Promise((resolve) => {
-      console.log(
-        'AIService.getMockResponse - Promise created, setting timeout...',
-      );
       setTimeout(() => {
         try {
-          console.log(
-            'AIService.getMockResponse - Timeout executed, processing payload...',
-          );
           let response;
           switch (payload.type) {
             case 'generate_structure':
-              console.log(
-                'AIService.getMockResponse - generate_structure case',
-              );
               response = this.getMockStructureResponse(
                 payload.prompt as string,
               );
               break;
             case 'analyze_structure':
-              console.log('AIService.getMockResponse - analyze_structure case');
               response = this.getMockAnalysisResponse();
               break;
             case 'general_chemistry':
-              console.log('AIService.getMockResponse - general_chemistry case');
               response = this.getMockGeneralResponse(
                 payload.question as string,
               );
               break;
             case 'predict_reaction':
-              console.log('AIService.getMockResponse - predict_reaction case');
               response = this.getMockReactionResponse();
               break;
             default:
-              console.log('AIService.getMockResponse - default case');
               response = this.getMockGeneralResponse(
                 (payload.prompt as string) ||
                   (payload.question as string) ||
@@ -828,11 +804,6 @@ SMILES: 化合物名: 構造式
             };
           }
 
-          console.log(
-            'AIService.getMockResponse - Generated response:',
-            response,
-          );
-          console.log('AIService.getMockResponse - About to resolve...');
           resolve(response);
         } catch (error) {
           console.error('AIService.getMockResponse - ERROR in timeout:', error);
@@ -842,10 +813,6 @@ SMILES: 化合物名: 構造式
             structures: [],
             suggestions: ['再試行', 'サポートに連絡'],
           };
-          console.log(
-            'AIService.getMockResponse - Resolving with fallback:',
-            fallbackResponse,
-          );
           resolve(fallbackResponse);
         }
       }, 800); // 短縮してレスポンスを早く
