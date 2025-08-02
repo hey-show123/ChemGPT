@@ -28,8 +28,10 @@ export interface StructureGenerationResult {
  * KetcherのOpen Structure機能と同様の実装
  */
 export class StructureGenerator {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private dispatch?: (action: any) => void;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(dispatch?: (action: any) => void) {
     console.log('StructureGenerator created with Ketcher integration');
     this.dispatch = dispatch;
@@ -38,6 +40,7 @@ export class StructureGenerator {
   /**
    * Reduxのdispatchを設定
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setDispatch(dispatch: (action: any) => void) {
     this.dispatch = dispatch;
   }
@@ -98,6 +101,7 @@ export class StructureGenerator {
 
           // Step 3: load actionを作成・実行（Open.container.tsと同じ）
           const { load } = await import('../state/shared');
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const loadAction = load(structure.data as any, {
             fragment: true,
             'input-format': inputFormat,

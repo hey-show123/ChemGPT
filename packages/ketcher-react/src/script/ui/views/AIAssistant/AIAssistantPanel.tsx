@@ -28,6 +28,7 @@ import StructureGenerator from '../../services/StructureGenerator';
 export interface AIAssistantPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dispatch: (action: any) => void;
 }
 
@@ -374,6 +375,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
           addedStructures: 0,
         }),
         getCurrentStructureAsKet: () => null,
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
         setDispatch: () => {},
       } as unknown as StructureGenerator;
     }
