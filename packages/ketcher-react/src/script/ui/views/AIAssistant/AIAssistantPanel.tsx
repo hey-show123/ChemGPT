@@ -664,9 +664,6 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                     <div>
                       <strong>{structure.label || `構造 ${index + 1}`}</strong>
                     </div>
-                    <div>
-                      {structure.format.toUpperCase()}: {structure.data}
-                    </div>
                     <StructureButton
                       onClick={() => handleAddStructure(structure)}
                     >

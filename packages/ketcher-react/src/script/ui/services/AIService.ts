@@ -462,54 +462,28 @@ export class AIService {
         return (
           basePrompt +
           `
-          
-化合物名から化学構造を生成する際は、以下のフォーマットで回答してください：
 
-1. 化合物の概要説明（50-100文字）
-2. 必ずSMILES形式で構造を提供（「SMILES: 」の後に正確な構造式）
-3. 化学的特徴（分子式、分子量、主要官能基、用途など）
-4. 安全性や取り扱い注意点（該当する場合）
+優秀な科学者として化合物について説明してください。構造を提供する際は以下の形式で記載してください：
 
-例：
-アスピリン（アセチルサリチル酸）は解熱・鎮痛・抗炎症作用を持つ代表的なNSAIDです。
+SMILES: 化合物名: 構造式
 
-SMILES: CC(=O)OC1=CC=CC=C1C(=O)O
+例: SMILES: アスピリン: CC(=O)OC1=CC=CC=C1C(=O)O
 
-【化学的特徴】
-- 分子式: C9H8O4
-- 分子量: 180.16 g/mol
-- 主要官能基: エステル基、カルボキシル基、ベンゼン環
-- 用途: 解熱鎮痛薬、血栓予防
-
-【注意点】
-胃腸障害のリスクがあるため、食後服用が推奨されます。`
+注意: SMILES行はシステムが自動処理するため、チャットでは非表示になります。`
         );
       case 'analyze_structure':
         return (
           basePrompt +
           `
-          
-化学構造を分析する際は、以下の項目について詳しく説明してください：
 
-1. 構造の概要と化合物名（既知の場合）
-2. 分子式と分子量
-3. 主要な官能基とその特徴
-4. 化学的性質（極性、酸性・塩基性、反応性など）
-5. 生物活性や用途（既知の場合）
-6. 合成方法や前駆体化合物
-7. 安全性情報`
+優秀な科学者として提供された化学構造について詳しく分析・説明してください。`
         );
       default:
         return (
           basePrompt +
           `
-          
-化学に関する質問には以下の点を考慮して回答してください：
-- 正確な科学的根拠に基づく情報
-- 分かりやすい説明と具体例
-- 安全性や取り扱い注意点
-- 関連する化合物や反応の提示
-- 実用的な応用例や背景知識`
+
+優秀な科学者として化学に関する質問に正確で分かりやすく回答してください。`
         );
     }
   }
@@ -573,9 +547,9 @@ SMILES: CC(=O)OC1=CC=CC=C1C(=O)O
         break;
     }
 
-    // SMILES形式の構造を抽出（改善版）
+    // SMILES形式の構造を抽出（新形式対応: SMILES: 化合物名: 構造式）
     const smilesMatches = content.match(
-      /SMILES:\s*([A-Za-z0-9@+\-[\]()=#/.]+)/gi,
+      /SMILES:\s*([^:]+):\s*([A-Za-z0-9@+\-[\]()=#/.]+)/gi,
     );
 
     const structures: ChemicalStructure[] = [];
@@ -584,27 +558,66 @@ SMILES: CC(=O)OC1=CC=CC=C1C(=O)O
       (originalPayload.type as string) === 'generate_structure'
     ) {
       smilesMatches.forEach((match, index) => {
-        const smilesData = match.replace(/SMILES:\s*/i, '').trim();
-        if (smilesData) {
+        // 新形式から化合物名とSMILESを抽出
+        const parts = match.match(
+          /SMILES:\s*([^:]+):\s*([A-Za-z0-9@+\-[\]()=#/.]+)/i,
+        );
+        if (parts && parts.length >= 3) {
+          const compoundName = parts[1].trim();
+          const smilesData = parts[2].trim();
+
           structures.push({
             format: 'smiles',
             data: smilesData,
-            label: (originalPayload.prompt as string) || `構造 ${index + 1}`,
+            label: compoundName || `構造 ${index + 1}`,
             action: 'add',
           });
         }
       });
     }
 
+    // 旧形式も念のためサポート（後方互換性）
+    if (structures.length === 0) {
+      const oldFormatMatches = content.match(
+        /SMILES:\s*([A-Za-z0-9@+\-[\]()=#/.]+)/gi,
+      );
+
+      if (
+        oldFormatMatches &&
+        (originalPayload.type as string) === 'generate_structure'
+      ) {
+        oldFormatMatches.forEach((match, index) => {
+          const smilesData = match.replace(/SMILES:\s*/i, '').trim();
+          if (smilesData) {
+            // 旧形式では既存の抽出方法を使用
+            const compoundName = this.extractCompoundName(
+              content,
+              originalPayload.prompt as string,
+            );
+
+            structures.push({
+              format: 'smiles',
+              data: smilesData,
+              label: compoundName || `構造 ${index + 1}`,
+              action: 'add',
+            });
+          }
+        });
+      }
+    }
+
+    // チャット表示用にSMILES文字列を除去したクリーンなメッセージを作成
+    const cleanMessage = this.removeStructureDataFromMessage(content);
+
     // 賢い提案を生成
     const suggestions = this.generateSmartSuggestions(
-      content,
+      cleanMessage,
       originalPayload,
       structures,
     );
 
     return {
-      message: content,
+      message: cleanMessage,
       structures,
       suggestions,
     };
@@ -713,6 +726,72 @@ SMILES: CC(=O)OC1=CC=CC=C1C(=O)O
     ];
 
     return chemicalTerms.filter((term) => content.includes(term)).slice(0, 2);
+  }
+
+  /**
+   * AI応答から化合物名を抽出する
+   */
+  private extractCompoundName(content: string, originalPrompt: string): string {
+    // パターン1: 括弧内の化合物名を抽出（例：「アスピリン（アセチルサリチル酸）」）
+    const bracketMatch = content.match(/([^\s（]+)（([^）]+)）/);
+    if (bracketMatch) {
+      return bracketMatch[1]; // 括弧前の名前を返す
+    }
+
+    // パターン2: 最初の行から化合物名を抽出
+    const firstLine = content.split('\n')[0];
+    const commonWords = ['は', 'の', 'が', 'を', 'に', 'で', 'と', '、', '。'];
+    let compoundName = firstLine;
+
+    // 一般的な助詞で区切って最初の単語を取得
+    for (const word of commonWords) {
+      const index = compoundName.indexOf(word);
+      if (index > 0) {
+        compoundName = compoundName.substring(0, index);
+        break;
+      }
+    }
+
+    // パターン3: 元のプロンプトから化合物名を推測
+    if (compoundName.length > 20 || !compoundName) {
+      // プロンプトから「の構造」「を描いて」などを除去
+      const cleanPrompt = originalPrompt
+        .replace(/の構造.*$/g, '')
+        .replace(/を描いて.*$/g, '')
+        .replace(/について.*$/g, '')
+        .trim();
+
+      if (cleanPrompt.length > 0 && cleanPrompt.length < 20) {
+        return cleanPrompt;
+      }
+    }
+
+    return compoundName.trim();
+  }
+
+  /**
+   * メッセージからSMILES文字列やその他の構造データを除去してクリーンなテキストにする
+   */
+  private removeStructureDataFromMessage(content: string): string {
+    // 新形式のSMILES行を除去（SMILES: 化合物名: 構造式）
+    let cleanContent = content.replace(
+      /SMILES:\s*[^:]+:\s*[A-Za-z0-9@+\-[\]()=#/.]+/gi,
+      '',
+    );
+
+    // 旧形式のSMILES行も除去（後方互換性）
+    cleanContent = cleanContent.replace(
+      /SMILES:\s*[A-Za-z0-9@+\-[\]()=#/.]+/gi,
+      '',
+    );
+
+    // 連続する改行を整理
+    cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n');
+
+    // 先頭と末尾の空白を除去
+    cleanContent = cleanContent.trim();
+
+    return cleanContent;
   }
 
   /**
