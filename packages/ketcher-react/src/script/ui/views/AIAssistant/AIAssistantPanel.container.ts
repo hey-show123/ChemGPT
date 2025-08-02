@@ -27,6 +27,7 @@ const mapStateToProps = (state: { aiAssistant: { isOpen: boolean } }) => {
 
 const mapDispatchToProps = (dispatch: Dispatch) => ({
   onClose: () => dispatch(closeAIAssistant()),
+  dispatch: dispatch, // dispatchを直接渡す
 });
 
 export const AIAssistantPanelContainer = connect(

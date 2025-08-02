@@ -28,6 +28,7 @@ import StructureGenerator from '../../services/StructureGenerator';
 export interface AIAssistantPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  dispatch: (action: any) => void;
 }
 
 // Remove overlay - not needed
@@ -329,6 +330,7 @@ const ModelDescription = styled.div`
 export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   isOpen,
   onClose,
+  dispatch,
 }) => {
   console.log('🚀 AIAssistantPanel rendering with props:', { isOpen });
   console.log('🎯 AIAssistantPanel mounted!');
@@ -359,7 +361,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   const [structureGenerator] = useState(() => {
     console.log('Creating StructureGenerator instance...');
     try {
-      const generator = new StructureGenerator();
+      const generator = new StructureGenerator(dispatch);
       console.log('StructureGenerator created successfully');
       return generator;
     } catch (error) {
@@ -372,6 +374,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
           addedStructures: 0,
         }),
         getCurrentStructureAsKet: () => null,
+        setDispatch: () => {},
       } as unknown as StructureGenerator;
     }
   });
@@ -385,6 +388,13 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     setAvailableModels(models);
     setCurrentModel(aiService.getCurrentModel());
   }, [aiService]);
+
+  // StructureGeneratorにdispatchを設定
+  useEffect(() => {
+    if (structureGenerator && dispatch) {
+      structureGenerator.setDispatch(dispatch);
+    }
+  }, [structureGenerator, dispatch]);
 
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {

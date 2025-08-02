@@ -15,7 +15,6 @@
  ***************************************************************************/
 
 import { ChemicalStructure } from './AIService';
-import { load } from '../state/shared';
 import { ketcherProvider, ChemicalMimeType } from 'ketcher-core';
 
 export interface StructureGenerationResult {
@@ -29,8 +28,18 @@ export interface StructureGenerationResult {
  * KetcherのOpen Structure機能と同様の実装
  */
 export class StructureGenerator {
-  constructor() {
+  private dispatch?: (action: any) => void;
+
+  constructor(dispatch?: (action: any) => void) {
     console.log('StructureGenerator created with Ketcher integration');
+    this.dispatch = dispatch;
+  }
+
+  /**
+   * Reduxのdispatchを設定
+   */
+  setDispatch(dispatch: (action: any) => void) {
+    this.dispatch = dispatch;
   }
 
   private getKetcherInstance() {
@@ -48,6 +57,7 @@ export class StructureGenerator {
   /**
    * AI応答から構造データを抽出してキャンバスに追加
    * Open StructureのAdd to Canvasボタンと完全に同じ実装
+   * マウス追従→クリック配置の挙動を実現
    */
   async addStructuresToCanvas(
     structures: ChemicalStructure[],
@@ -56,17 +66,6 @@ export class StructureGenerator {
 
     if (!structures || structures.length === 0) {
       return { success: true, addedStructures: 0 };
-    }
-
-    // Redux stateを取得
-    const state = (global as { currentState?: unknown }).currentState;
-    if (!state) {
-      console.error('Redux state not available');
-      return {
-        success: false,
-        error: 'Redux state not available',
-        addedStructures: 0,
-      };
     }
 
     try {
@@ -81,45 +80,36 @@ export class StructureGenerator {
         try {
           // フォーマットからMIMEタイプへの変換（Open.tsxと同じ）
           const inputFormat = this.getFormatMimeType(structure.format);
-
           console.log(`Using format: ${inputFormat}`);
 
           // Open StructureのcopyHandlerと完全に同じロジック
-          // load(structStr, { fragment: true, 'input-format': format })
-          // loadは文字列を受け取り、thunk関数を返す
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const loadAction = load(structure.data as unknown as any, {
+          // 1. exec('copy')を実行してクリップボードを有効化
+          // 2. load()でfragment: trueを指定してpaste toolを起動
+
+          // Step 1: クリップボードにコピー操作を実行
+          // これによりpaste toolが正しく動作する準備ができる
+          const { exec } = await import('../component/cliparea/cliparea');
+          exec('copy');
+
+          // Step 2: dispatchを取得
+          if (!this.dispatch) {
+            throw new Error('Redux dispatch not available');
+          }
+
+          // Step 3: load actionを作成・実行（Open.container.tsと同じ）
+          const { load } = await import('../state/shared');
+          const loadAction = load(structure.data as any, {
             fragment: true,
             'input-format': inputFormat,
           });
 
-          // Redux dispatchを模倣
-          if (typeof loadAction === 'function') {
-            await loadAction(
-              (action: {
-                type: string;
-                action?: { tool: string; opts: unknown };
-              }) => {
-                console.log('StructureGenerator: Dispatching action:', action);
-                // 実際のdispatch処理をここで行う
-                if (
-                  action.type === 'ACTION' &&
-                  action.action?.tool === 'paste'
-                ) {
-                  console.log(
-                    'StructureGenerator: Paste action detected',
-                    action.action.opts,
-                  );
-                  // paste toolを実行
-                  this.executePasteAction(action.action);
-                }
-              },
-              () => state,
-            );
+          // Step 4: dispatchを実行してpaste toolを起動
+          this.dispatch(loadAction);
 
-            addedCount++;
-            console.log(`Successfully added structure: ${structure.label}`);
-          }
+          addedCount++;
+          console.log(
+            `Successfully activated paste tool for: ${structure.label}`,
+          );
         } catch (structError) {
           console.error(
             `Failed to add structure ${structure.label}:`,
@@ -156,34 +146,6 @@ export class StructureGenerator {
     };
 
     return formatMap[format.toLowerCase()] || ChemicalMimeType.DaylightSmiles;
-  }
-
-  private executePasteAction(action: { tool: string; opts: unknown }) {
-    try {
-      const ketcher = this.getKetcherInstance();
-      if (!ketcher) return;
-
-      // pasteツールのアクションを実行
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const editor = (ketcher as unknown as any).editor;
-      if (editor && action.opts) {
-        console.log('Executing paste action with opts:', action.opts);
-        // paste toolと同じ方法で構造を追加
-        editor.selection(null); // 選択をクリア
-
-        // ここでpasteツールの実際の処理を呼び出す
-        // tools/paste.jsのactionと同じ処理
-        const pasteAction = {
-          tool: 'paste',
-          opts: action.opts,
-        };
-
-        // toolのactionを実行
-        editor.tool(pasteAction.tool, pasteAction.opts);
-      }
-    } catch (error) {
-      console.error('Error executing paste action:', error);
-    }
   }
 
   /**
