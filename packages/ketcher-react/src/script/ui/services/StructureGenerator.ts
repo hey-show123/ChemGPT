@@ -87,7 +87,7 @@ export class StructureGenerator {
           // Open StructureのcopyHandlerと完全に同じロジック
           // load(structStr, { fragment: true, 'input-format': format })
           // loadは文字列を受け取り、thunk関数を返す
-          const loadAction = load(structure.data as string, {
+          const loadAction = load(structure.data as unknown as any, {
             fragment: true,
             'input-format': inputFormat,
           });
@@ -163,14 +163,7 @@ export class StructureGenerator {
       if (!ketcher) return;
 
       // pasteツールのアクションを実行
-      const editor = (
-        ketcher as {
-          editor?: {
-            selection: (arg: null) => void;
-            tool: (tool: string, opts: unknown) => void;
-          };
-        }
-      ).editor;
+      const editor = (ketcher as unknown as any).editor;
       if (editor && action.opts) {
         console.log('Executing paste action with opts:', action.opts);
         // paste toolと同じ方法で構造を追加
@@ -206,7 +199,17 @@ export class StructureGenerator {
 
     try {
       // 現在の構造をKET形式で取得
-      const ketString = (ketcher as { getKet: () => string }).getKet();
+      const ketPromise = (ketcher as unknown as any).getKet();
+      console.log('Retrieved KET structure promise:', ketPromise);
+
+      // getKetは非同期の場合があるので適切に処理
+      if (ketPromise && typeof ketPromise.then === 'function') {
+        // Promiseの場合は同期処理では扱えないため、ここでは null を返す
+        console.log('getKet returned a Promise, cannot handle synchronously');
+        return null;
+      }
+
+      const ketString = ketPromise as string;
       console.log('Retrieved KET structure:', ketString ? 'success' : 'empty');
       return ketString || null;
     } catch (error) {
