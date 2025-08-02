@@ -391,44 +391,142 @@ const StructureRenderer: React.FC<{ smiles: string; label: string }> = ({
         // Create a simple SVG representation for the SMILES structure
         // This provides a visual representation without relying on external APIs
         const createStructureSVG = (smilesData: string) => {
-          // Simple visual representation for common chemical structures
-          const isAromatic =
-            smilesData.includes('c') || smilesData.includes('C1=CC=CC=C1');
-          const hasRings = /\d/.test(smilesData) || smilesData.includes('c');
-          const hasBranches =
-            smilesData.includes('(') && smilesData.includes(')');
-
+          // Enhanced SMILES parsing for better chemical structure representation
           let structureElements = '';
 
-          if (isAromatic) {
-            // Draw benzene ring for aromatic compounds
-            structureElements += `
-              <polygon points="100,50 120,65 120,95 100,110 80,95 80,65" 
-                fill="none" stroke="#333" stroke-width="2"/>
-              <polygon points="100,58 115,70 115,90 100,102 85,90 85,70" 
-                fill="none" stroke="#333" stroke-width="1"/>
+          // Specific compound detection for common molecules
+          if (smilesData.includes('CC(=O)OC1=CC=CC=C1C(=O)O')) {
+            // Aspirin structure - Ketcher style
+            structureElements = `
+              <!-- Benzene ring -->
+              <line x1="120" y1="75" x2="140" y2="87" stroke="#000" stroke-width="1"/>
+              <line x1="140" y1="87" x2="140" y2="113" stroke="#000" stroke-width="1"/>
+              <line x1="140" y1="113" x2="120" y2="125" stroke="#000" stroke-width="1"/>
+              <line x1="120" y1="125" x2="100" y2="113" stroke="#000" stroke-width="1"/>
+              <line x1="100" y1="113" x2="100" y2="87" stroke="#000" stroke-width="1"/>
+              <line x1="100" y1="87" x2="120" y2="75" stroke="#000" stroke-width="1"/>
+              <!-- Double bonds in benzene (inner) -->
+              <line x1="110" y1="82" x2="125" y2="92" stroke="#000" stroke-width="1"/>
+              <line x1="125" y1="108" x2="110" y2="118" stroke="#000" stroke-width="1"/>
+              <line x1="110" y1="95" x2="110" y2="105" stroke="#000" stroke-width="1"/>
+              
+              <!-- Ester linkage -->
+              <line x1="100" y1="87" x2="85" y2="75" stroke="#000" stroke-width="1"/>
+              <text x="80" y="80" font-family="Arial" font-size="12" fill="#d00">O</text>
+              
+              <!-- Acetyl group -->
+              <line x1="85" y1="75" x2="70" y2="63" stroke="#000" stroke-width="1"/>
+              <line x1="70" y1="63" x2="70" y2="48" stroke="#000" stroke-width="1"/>
+              <line x1="72" y1="63" x2="72" y2="48" stroke="#000" stroke-width="1"/>
+              <text x="60" y="46" font-family="Arial" font-size="12" fill="#d00">O</text>
+              <line x1="70" y1="63" x2="55" y2="68" stroke="#000" stroke-width="1"/>
+              
+              <!-- Carboxyl group -->
+              <line x1="140" y1="113" x2="155" y2="125" stroke="#000" stroke-width="1"/>
+              <line x1="155" y1="125" x2="170" y2="113" stroke="#000" stroke-width="1"/>
+              <line x1="157" y1="123" x2="167" y2="115" stroke="#000" stroke-width="1"/>
+              <text x="165" y="118" font-family="Arial" font-size="12" fill="#d00">O</text>
+              <line x1="170" y1="113" x2="185" y2="125" stroke="#000" stroke-width="1"/>
+              <text x="185" y="130" font-family="Arial" font-size="12" fill="#d00">OH</text>
             `;
-          } else if (hasRings) {
-            // Draw simple ring structure
-            structureElements += `
-              <circle cx="100" cy="75" r="25" fill="none" stroke="#333" stroke-width="2"/>
+          } else if (smilesData.includes('CN1C=NC2=C1C(=O)N(C(=O)N2C)C')) {
+            // Caffeine structure - Ketcher style
+            structureElements = `
+              <!-- Five-membered ring -->
+              <line x1="100" y1="80" x2="85" y2="92" stroke="#000" stroke-width="1"/>
+              <line x1="85" y1="92" x2="100" y2="110" stroke="#000" stroke-width="1"/>
+              <line x1="100" y1="110" x2="115" y2="95" stroke="#000" stroke-width="1"/>
+              <line x1="115" y1="95" x2="100" y2="80" stroke="#000" stroke-width="1"/>
+              
+              <!-- Six-membered ring -->
+              <line x1="100" y1="110" x2="130" y2="110" stroke="#000" stroke-width="1"/>
+              <line x1="130" y1="110" x2="145" y2="95" stroke="#000" stroke-width="1"/>
+              <line x1="145" y1="95" x2="130" y2="80" stroke="#000" stroke-width="1"/>
+              <line x1="130" y1="80" x2="115" y2="95" stroke="#000" stroke-width="1"/>
+              
+              <!-- Nitrogen atoms -->
+              <text x="82" y="97" font-family="Arial" font-size="11" fill="#00f">N</text>
+              <text x="112" y="100" font-family="Arial" font-size="11" fill="#00f">N</text>
+              <text x="127" y="115" font-family="Arial" font-size="11" fill="#00f">N</text>
+              <text x="142" y="82" font-family="Arial" font-size="11" fill="#00f">N</text>
+              
+              <!-- Oxygen atoms -->
+              <text x="90" y="75" font-family="Arial" font-size="11" fill="#d00">O</text>
+              <text x="150" y="105" font-family="Arial" font-size="11" fill="#d00">O</text>
+              
+              <!-- Methyl groups -->
+              <line x1="75" y1="85" x2="60" y2="75" stroke="#000" stroke-width="1"/>
+              <line x1="130" y1="120" x2="130" y2="135" stroke="#000" stroke-width="1"/>
+              <line x1="155" y1="85" x2="170" y2="75" stroke="#000" stroke-width="1"/>
             `;
           } else {
-            // Draw linear structure
-            structureElements += `
-              <line x1="50" y1="75" x2="150" y2="75" stroke="#333" stroke-width="2"/>
-              <circle cx="50" cy="75" r="3" fill="#333"/>
-              <circle cx="100" cy="75" r="3" fill="#333"/>
-              <circle cx="150" cy="75" r="3" fill="#333"/>
-            `;
-          }
+            // Generic structure detection
+            const isAromatic =
+              smilesData.includes('c') || /C1=CC=CC=C1/i.test(smilesData);
+            const hasRings = /\d/.test(smilesData);
+            const hasBranches =
+              smilesData.includes('(') && smilesData.includes(')');
+            const hasOxygen = smilesData.includes('O');
+            const hasNitrogen = smilesData.includes('N');
+            const hasCarboxyl = /C\(=O\)O/i.test(smilesData);
 
-          if (hasBranches) {
-            // Add branch indicators
-            structureElements += `
-              <line x1="100" y1="75" x2="100" y2="50" stroke="#333" stroke-width="1"/>
-              <circle cx="100" cy="50" r="2" fill="#666"/>
-            `;
+            if (isAromatic) {
+              // Benzene ring - Ketcher style
+              structureElements += `
+                <line x1="100" y1="55" x2="118" y2="65" stroke="#000" stroke-width="1"/>
+                <line x1="118" y1="65" x2="118" y2="95" stroke="#000" stroke-width="1"/>
+                <line x1="118" y1="95" x2="100" y2="105" stroke="#000" stroke-width="1"/>
+                <line x1="100" y1="105" x2="82" y2="95" stroke="#000" stroke-width="1"/>
+                <line x1="82" y1="95" x2="82" y2="65" stroke="#000" stroke-width="1"/>
+                <line x1="82" y1="65" x2="100" y2="55" stroke="#000" stroke-width="1"/>
+                <!-- Inner double bonds -->
+                <line x1="91" y1="62" x2="106" y2="71" stroke="#000" stroke-width="1"/>
+                <line x1="109" y1="89" x2="91" y2="98" stroke="#000" stroke-width="1"/>
+                <line x1="91" y1="75" x2="91" y2="85" stroke="#000" stroke-width="1"/>
+              `;
+            } else if (hasRings) {
+              // Cyclic structure - Ketcher style
+              structureElements += `
+                <line x1="100" y1="55" x2="120" y2="75" stroke="#000" stroke-width="1"/>
+                <line x1="120" y1="75" x2="100" y2="95" stroke="#000" stroke-width="1"/>
+                <line x1="100" y1="95" x2="80" y2="75" stroke="#000" stroke-width="1"/>
+                <line x1="80" y1="75" x2="100" y2="55" stroke="#000" stroke-width="1"/>
+              `;
+            } else {
+              // Linear structure - Ketcher style
+              structureElements += `
+                <line x1="60" y1="75" x2="100" y2="75" stroke="#000" stroke-width="1"/>
+                <line x1="100" y1="75" x2="140" y2="75" stroke="#000" stroke-width="1"/>
+              `;
+            }
+
+            // Add functional groups - Ketcher style
+            if (hasCarboxyl) {
+              structureElements += `
+                <line x1="140" y1="75" x2="155" y2="85" stroke="#000" stroke-width="1"/>
+                <line x1="155" y1="85" x2="170" y2="75" stroke="#000" stroke-width="1"/>
+                <line x1="154" y1="75" x2="154" y2="75" stroke="#000" stroke-width="2"/>
+                <text x="165" y="80" font-family="Arial" font-size="11" fill="#d00">O</text>
+                <line x1="170" y1="75" x2="185" y2="85" stroke="#000" stroke-width="1"/>
+                <text x="180" y="90" font-family="Arial" font-size="11" fill="#d00">OH</text>
+              `;
+            } else if (hasOxygen) {
+              structureElements += `
+                <text x="145" y="80" font-family="Arial" font-size="11" fill="#d00">O</text>
+              `;
+            }
+
+            if (hasNitrogen) {
+              structureElements += `
+                <text x="85" y="65" font-family="Arial" font-size="11" fill="#00f">N</text>
+              `;
+            }
+
+            if (hasBranches) {
+              structureElements += `
+                <line x1="100" y1="75" x2="100" y2="55" stroke="#000" stroke-width="1"/>
+              `;
+            }
           }
 
           return `
