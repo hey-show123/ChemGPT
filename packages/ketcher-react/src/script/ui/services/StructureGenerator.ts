@@ -59,7 +59,7 @@ export class StructureGenerator {
     }
 
     // Redux stateを取得
-    const state = (global as any).currentState;
+    const state = (global as { currentState?: unknown }).currentState;
     if (!state) {
       console.error('Redux state not available');
       return {
@@ -87,7 +87,7 @@ export class StructureGenerator {
           // Open StructureのcopyHandlerと完全に同じロジック
           // load(structStr, { fragment: true, 'input-format': format })
           // loadは文字列を受け取り、thunk関数を返す
-          const loadAction = load(structure.data as any, {
+          const loadAction = load(structure.data as string, {
             fragment: true,
             'input-format': inputFormat,
           });
@@ -95,7 +95,10 @@ export class StructureGenerator {
           // Redux dispatchを模倣
           if (typeof loadAction === 'function') {
             await loadAction(
-              (action: any) => {
+              (action: {
+                type: string;
+                action?: { tool: string; opts: unknown };
+              }) => {
                 console.log('StructureGenerator: Dispatching action:', action);
                 // 実際のdispatch処理をここで行う
                 if (
@@ -154,13 +157,20 @@ export class StructureGenerator {
     return formatMap[format.toLowerCase()] || ChemicalMimeType.DaylightSmiles;
   }
 
-  private executePasteAction(action: any) {
+  private executePasteAction(action: { tool: string; opts: unknown }) {
     try {
       const ketcher = this.getKetcherInstance();
       if (!ketcher) return;
 
       // pasteツールのアクションを実行
-      const editor = (ketcher as any).editor;
+      const editor = (
+        ketcher as {
+          editor?: {
+            selection: (arg: null) => void;
+            tool: (tool: string, opts: unknown) => void;
+          };
+        }
+      ).editor;
       if (editor && action.opts) {
         console.log('Executing paste action with opts:', action.opts);
         // paste toolと同じ方法で構造を追加
@@ -196,7 +206,7 @@ export class StructureGenerator {
 
     try {
       // 現在の構造をKET形式で取得
-      const ketString = (ketcher as any).getKet();
+      const ketString = (ketcher as { getKet: () => string }).getKet();
       console.log('Retrieved KET structure:', ketString ? 'success' : 'empty');
       return ketString || null;
     } catch (error) {
