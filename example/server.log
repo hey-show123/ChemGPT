@@ -3,19 +3,21 @@
 > serve dist/standalone -c serve.json -p 4002
 
  INFO  Accepting connections at http://localhost:4002
- HTTP  8/2/2025 1:29:40 PM ::1 GET /
- HTTP  8/2/2025 1:29:40 PM ::1 Returned 200 in 13 ms
- HTTP  8/2/2025 1:29:40 PM ::1 GET /static/js/main.dbc74451.js
- HTTP  8/2/2025 1:29:40 PM ::1 GET /.well-known/appspecific/com.chrome.devtools.json
- HTTP  8/2/2025 1:29:40 PM ::1 Returned 200 in 1 ms
- HTTP  8/2/2025 1:29:40 PM ::1 GET /static/css/main.5c30c720.css
- HTTP  8/2/2025 1:29:40 PM ::1 Returned 304 in 1 ms
- HTTP  8/2/2025 1:29:40 PM ::1 Returned 200 in 20 ms
- HTTP  8/2/2025 1:29:40 PM ::1 GET /manifest.json
- HTTP  8/2/2025 1:29:40 PM ::1 Returned 304 in 1 ms
- HTTP  8/2/2025 1:29:40 PM ::1 GET /static/js/862.54d96490.chunk.js
- HTTP  8/2/2025 1:29:40 PM ::1 GET /static/js/101.ac21b6b4.chunk.js
- HTTP  8/2/2025 1:29:40 PM ::1 GET /favicon.ico
- HTTP  8/2/2025 1:29:40 PM ::1 Returned 304 in 1 ms
- HTTP  8/2/2025 1:29:40 PM ::1 Returned 304 in 1 ms
- HTTP  8/2/2025 1:29:40 PM ::1 Returned 200 in 2 ms
+ HTTP  8/2/2025 2:50:16 PM ::1 GET /
+ HTTP  8/2/2025 2:50:16 PM ::1 Returned 200 in 13 ms
+ HTTP  8/2/2025 2:57:12 PM ::1 GET /
+ HTTP  8/2/2025 2:57:12 PM ::1 Returned 200 in 3 ms
+ HTTP  8/2/2025 2:57:12 PM ::1 GET /static/js/main.fe867360.js
+ HTTP  8/2/2025 2:57:12 PM ::1 GET /.well-known/appspecific/com.chrome.devtools.json
+ HTTP  8/2/2025 2:57:12 PM ::1 GET /static/css/main.5c30c720.css
+ HTTP  8/2/2025 2:57:12 PM ::1 Returned 200 in 1 ms
+ HTTP  8/2/2025 2:57:12 PM ::1 Returned 304 in 1 ms
+ HTTP  8/2/2025 2:57:12 PM ::1 Returned 200 in 27 ms
+ HTTP  8/2/2025 2:57:13 PM ::1 GET /manifest.json
+ HTTP  8/2/2025 2:57:13 PM ::1 Returned 304 in 5 ms
+ HTTP  8/2/2025 2:57:13 PM ::1 GET /static/js/947.ba28efa3.chunk.js
+ HTTP  8/2/2025 2:57:13 PM ::1 GET /static/js/101.ac21b6b4.chunk.js
+ HTTP  8/2/2025 2:57:13 PM ::1 GET /favicon.ico
+ HTTP  8/2/2025 2:57:13 PM ::1 Returned 304 in 1 ms
+ HTTP  8/2/2025 2:57:13 PM ::1 Returned 304 in 1 ms
+ HTTP  8/2/2025 2:57:13 PM ::1 Returned 200 in 6 ms

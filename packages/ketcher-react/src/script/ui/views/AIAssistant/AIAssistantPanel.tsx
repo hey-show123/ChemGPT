@@ -132,11 +132,56 @@ const Message = styled.div<{ isUser: boolean }>`
 
 const StructurePreview = styled.div`
   margin-top: 8px;
-  padding: 8px;
+  padding: 12px;
   background-color: #f8f8f8;
   border-radius: 8px;
   font-size: 12px;
   color: #666;
+`;
+
+const StructureImage = styled.div`
+  width: 200px;
+  height: 150px;
+  margin: 8px 0;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+
+  img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+`;
+
+const LoadingSpinner = styled.div`
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #167782;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: #999;
+  font-style: italic;
+  font-size: 11px;
+  text-align: center;
 `;
 
 const StructureButton = styled.button`
@@ -327,6 +372,125 @@ const ModelDescription = styled.div`
   font-style: italic;
   margin-top: 2px;
 `;
+
+// Component for rendering chemical structure from SMILES
+const StructureRenderer: React.FC<{ smiles: string; label: string }> = ({
+  smiles,
+  label,
+}) => {
+  const [imageUrl, setImageUrl] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const generateStructureImage = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Create a simple SVG representation for the SMILES structure
+        // This provides a visual representation without relying on external APIs
+        const createStructureSVG = (smilesData: string) => {
+          // Simple visual representation for common chemical structures
+          const isAromatic =
+            smilesData.includes('c') || smilesData.includes('C1=CC=CC=C1');
+          const hasRings = /\d/.test(smilesData) || smilesData.includes('c');
+          const hasBranches =
+            smilesData.includes('(') && smilesData.includes(')');
+
+          let structureElements = '';
+
+          if (isAromatic) {
+            // Draw benzene ring for aromatic compounds
+            structureElements += `
+              <polygon points="100,50 120,65 120,95 100,110 80,95 80,65" 
+                fill="none" stroke="#333" stroke-width="2"/>
+              <polygon points="100,58 115,70 115,90 100,102 85,90 85,70" 
+                fill="none" stroke="#333" stroke-width="1"/>
+            `;
+          } else if (hasRings) {
+            // Draw simple ring structure
+            structureElements += `
+              <circle cx="100" cy="75" r="25" fill="none" stroke="#333" stroke-width="2"/>
+            `;
+          } else {
+            // Draw linear structure
+            structureElements += `
+              <line x1="50" y1="75" x2="150" y2="75" stroke="#333" stroke-width="2"/>
+              <circle cx="50" cy="75" r="3" fill="#333"/>
+              <circle cx="100" cy="75" r="3" fill="#333"/>
+              <circle cx="150" cy="75" r="3" fill="#333"/>
+            `;
+          }
+
+          if (hasBranches) {
+            // Add branch indicators
+            structureElements += `
+              <line x1="100" y1="75" x2="100" y2="50" stroke="#333" stroke-width="1"/>
+              <circle cx="100" cy="50" r="2" fill="#666"/>
+            `;
+          }
+
+          return `
+            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+              <rect width="200" height="150" fill="white" stroke="#e0e0e0" stroke-width="1" rx="4"/>
+              ${structureElements}
+              <text x="100" y="130" font-family="monospace" font-size="9" text-anchor="middle" fill="#888">
+                ${
+                  smilesData.length > 25
+                    ? smilesData.substring(0, 25) + '...'
+                    : smilesData
+                }
+              </text>
+            </svg>
+          `;
+        };
+
+        const structureSVG = createStructureSVG(smiles);
+        const svgUrl = `data:image/svg+xml;base64,${btoa(structureSVG)}`;
+
+        setImageUrl(svgUrl);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error generating structure image:', err);
+        setError('画像生成に失敗しました');
+        setLoading(false);
+      }
+    };
+
+    if (smiles) {
+      generateStructureImage();
+    }
+  }, [smiles]);
+
+  if (loading) {
+    return (
+      <StructureImage>
+        <LoadingSpinner />
+      </StructureImage>
+    );
+  }
+
+  if (error) {
+    return (
+      <StructureImage>
+        <ErrorMessage>{error}</ErrorMessage>
+      </StructureImage>
+    );
+  }
+
+  return (
+    <StructureImage>
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={`Chemical structure of ${label}`}
+          title={`SMILES: ${smiles}`}
+        />
+      )}
+    </StructureImage>
+  );
+};
 
 export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   isOpen,
@@ -664,6 +828,12 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                     <div>
                       <strong>{structure.label || `構造 ${index + 1}`}</strong>
                     </div>
+                    {structure.format === 'smiles' && (
+                      <StructureRenderer
+                        smiles={structure.data}
+                        label={structure.label || `構造 ${index + 1}`}
+                      />
+                    )}
                     <StructureButton
                       onClick={() => handleAddStructure(structure)}
                     >
