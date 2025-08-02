@@ -307,7 +307,7 @@ export class AIService {
       console.log('AIService.callAI START - payload:', payload);
 
       // 環境変数でモック使用を制御
-      const useMock = process.env.REACT_APP_USE_MOCK_AI === 'true';
+      const useMock = String(process.env.REACT_APP_USE_MOCK_AI) === 'true';
 
       console.log('AIService.callAI - decision:', {
         useMock,
@@ -455,21 +455,62 @@ export class AIService {
    */
   private buildSystemPrompt(type: string): string {
     const basePrompt =
-      'あなたは化学の専門家です。化学構造の生成や分析をサポートします。';
+      'あなたは専門的な化学知識を持つChemGPTアシスタントです。化学構造の生成、分析、化学反応の予測を正確に行います。';
 
     switch (type) {
       case 'generate_structure':
         return (
           basePrompt +
-          ' 化合物名から化学構造を生成してください。必ずSMILES形式で構造を提供し、「SMILES: 」の後に構造式を記載してください。例: SMILES: CC(=O)OC1=CC=CC=C1C(=O)O'
+          `
+          
+化合物名から化学構造を生成する際は、以下のフォーマットで回答してください：
+
+1. 化合物の概要説明（50-100文字）
+2. 必ずSMILES形式で構造を提供（「SMILES: 」の後に正確な構造式）
+3. 化学的特徴（分子式、分子量、主要官能基、用途など）
+4. 安全性や取り扱い注意点（該当する場合）
+
+例：
+アスピリン（アセチルサリチル酸）は解熱・鎮痛・抗炎症作用を持つ代表的なNSAIDです。
+
+SMILES: CC(=O)OC1=CC=CC=C1C(=O)O
+
+【化学的特徴】
+- 分子式: C9H8O4
+- 分子量: 180.16 g/mol
+- 主要官能基: エステル基、カルボキシル基、ベンゼン環
+- 用途: 解熱鎮痛薬、血栓予防
+
+【注意点】
+胃腸障害のリスクがあるため、食後服用が推奨されます。`
         );
       case 'analyze_structure':
         return (
           basePrompt +
-          ' 提供された化学構造を分析してその特徴を説明してください。分子式、分子量、官能基などの情報を含めてください。'
+          `
+          
+化学構造を分析する際は、以下の項目について詳しく説明してください：
+
+1. 構造の概要と化合物名（既知の場合）
+2. 分子式と分子量
+3. 主要な官能基とその特徴
+4. 化学的性質（極性、酸性・塩基性、反応性など）
+5. 生物活性や用途（既知の場合）
+6. 合成方法や前駆体化合物
+7. 安全性情報`
         );
       default:
-        return basePrompt + ' 化学に関する質問に詳しく答えてください。';
+        return (
+          basePrompt +
+          `
+          
+化学に関する質問には以下の点を考慮して回答してください：
+- 正確な科学的根拠に基づく情報
+- 分かりやすい説明と具体例
+- 安全性や取り扱い注意点
+- 関連する化合物や反応の提示
+- 実用的な応用例や背景知識`
+        );
     }
   }
 
@@ -479,19 +520,28 @@ export class AIService {
   private buildUserMessage(payload: Record<string, unknown>): string {
     switch (payload.type) {
       case 'generate_structure':
-        return `化合物「${
-          payload.prompt as string
-        }」の化学構造を生成してください。`;
+        return `以下の化合物について、詳細な情報とSMILES構造式を生成してください：
+
+化合物名: ${payload.prompt as string}
+
+上記のフォーマットに従って、化合物の概要、SMILES構造式、化学的特徴、安全性情報を含む包括的な回答をお願いします。`;
       case 'analyze_structure':
-        return `この化学構造について分析してください：${
-          payload.structure as string
-        }。質問：${payload.question as string}`;
+        return `以下の化学構造について詳細な分析を行ってください：
+
+構造データ: ${payload.structure as string}
+分析要求: ${payload.question as string}
+
+構造の特徴、化学的性質、用途、安全性について包括的に分析してください。`;
       default:
-        return (
+        return `以下の化学に関する質問にお答えください：
+
+質問: ${
           (payload.prompt as string) ||
           (payload.question as string) ||
-          '化学に関する質問です。'
-        );
+          '化学に関する一般的な質問'
+        }
+
+科学的根拠に基づき、分かりやすく詳細な説明をお願いします。`;
     }
   }
 
@@ -546,11 +596,123 @@ export class AIService {
       });
     }
 
+    // 賢い提案を生成
+    const suggestions = this.generateSmartSuggestions(
+      content,
+      originalPayload,
+      structures,
+    );
+
     return {
       message: content,
       structures,
-      suggestions: ['詳しく教えて', '関連化合物を表示', '構造を分析'],
+      suggestions,
     };
+  }
+
+  /**
+   * 文脈に応じた賢い提案を生成
+   */
+  private generateSmartSuggestions(
+    content: string,
+    originalPayload: Record<string, unknown>,
+    structures: ChemicalStructure[],
+  ): string[] {
+    const payloadType = originalPayload.type as string;
+    const prompt = (originalPayload.prompt as string) || '';
+
+    // 基本的な提案
+    const baseSuggestions: string[] = [];
+
+    if (payloadType === 'generate_structure' && structures.length > 0) {
+      const compoundName = structures[0].label || prompt;
+      baseSuggestions.push(
+        `${compoundName}の反応性について教えて`,
+        `${compoundName}の合成方法は？`,
+        `${compoundName}の類似化合物を表示`,
+      );
+
+      // 化合物の種類に応じた特定の提案
+      if (
+        content.toLowerCase().includes('薬') ||
+        content.toLowerCase().includes('医薬')
+      ) {
+        baseSuggestions.push(
+          `${compoundName}の副作用は？`,
+          `${compoundName}の作用機序は？`,
+        );
+      }
+      if (
+        content.toLowerCase().includes('有機溶媒') ||
+        content.toLowerCase().includes('溶媒')
+      ) {
+        baseSuggestions.push(
+          `${compoundName}の沸点は？`,
+          `${compoundName}の毒性について`,
+        );
+      }
+      if (
+        content.toLowerCase().includes('触媒') ||
+        content.toLowerCase().includes('catalyst')
+      ) {
+        baseSuggestions.push(
+          `${compoundName}を使った反応例`,
+          `${compoundName}の触媒活性`,
+        );
+      }
+    } else if (payloadType === 'analyze_structure') {
+      baseSuggestions.push(
+        '類似構造の化合物は？',
+        'この構造の合成方法は？',
+        'この化合物の用途は？',
+      );
+    } else {
+      baseSuggestions.push(
+        '関連する化合物を表示',
+        'この内容について詳しく',
+        '実例を教えて',
+      );
+    }
+
+    // 内容から関連キーワードを抽出して追加提案
+    const keywords = this.extractChemicalKeywords(content);
+    keywords.forEach((keyword) => {
+      if (baseSuggestions.length < 5) {
+        baseSuggestions.push(`${keyword}について詳しく`);
+      }
+    });
+
+    return baseSuggestions.slice(0, 4); // 最大4つの提案
+  }
+
+  /**
+   * 化学関連キーワードを抽出
+   */
+  private extractChemicalKeywords(content: string): string[] {
+    const chemicalTerms = [
+      'ベンゼン環',
+      'カルボニル基',
+      'ヒドロキシ基',
+      'アミノ基',
+      'カルボキシル基',
+      'エステル基',
+      'エーテル基',
+      'アルデヒド基',
+      'ケトン基',
+      'ニトロ基',
+      '芳香族',
+      '脂肪族',
+      '不飽和',
+      '立体異性体',
+      'エナンチオマー',
+      '酸化反応',
+      '還元反応',
+      '付加反応',
+      '置換反応',
+      '脱離反応',
+    ];
+
+    return chemicalTerms.filter((term) => content.includes(term)).slice(0, 2);
   }
 
   /**
