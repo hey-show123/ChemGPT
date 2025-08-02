@@ -330,7 +330,17 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   isOpen,
   onClose,
 }) => {
-  console.log('AIAssistantPanel rendering with props:', { isOpen });
+  console.log('🚀 AIAssistantPanel rendering with props:', { isOpen });
+  console.log('🎯 AIAssistantPanel mounted!');
+
+  // ページ読み込み時のテストログ
+  React.useEffect(() => {
+    console.log('✅ AIAssistantPanel useEffect triggered!');
+    console.log('🌟 JavaScript is working correctly!');
+
+    // グローバルテスト
+    window.console.log('🔥 GLOBAL TEST LOG - AIAssistantPanel loaded!');
+  }, []);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -359,9 +369,10 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         addStructuresToCanvas: async () => ({
           success: false,
           error: 'StructureGenerator not available',
+          addedStructures: 0,
         }),
         getCurrentStructureAsKet: () => null,
-      } as StructureGenerator;
+      } as unknown as StructureGenerator;
     }
   });
   const [availableModels, setAvailableModels] = useState<AIModelConfig[]>([]);
@@ -487,8 +498,71 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     }
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
+  const handleSuggestionClick = async (suggestion: string) => {
+    console.log('handleSuggestionClick called with:', suggestion);
     setInputValue(suggestion);
+
+    // 自動的にメッセージを送信
+    if (!isLoading) {
+      const userMessage: ChatMessage = {
+        id: Date.now() + '-user',
+        role: 'user',
+        content: suggestion,
+        timestamp: new Date(),
+        structures: [],
+      };
+
+      console.log('Adding user message:', userMessage);
+      setMessages((prev) => [...prev, userMessage]);
+      setInputValue('');
+      setIsLoading(true);
+
+      try {
+        console.log('AIAssistantPanel: Calling AI service...');
+        let aiResponse;
+        if (suggestion.includes('分析')) {
+          const currentStructure =
+            structureGenerator.getCurrentStructureAsKet();
+          aiResponse = await aiService.analyzeStructure(
+            currentStructure || '',
+            suggestion,
+          );
+        } else {
+          aiResponse = await aiService.generateStructure(suggestion);
+        }
+
+        console.log('AIAssistantPanel: AI response received:', aiResponse);
+
+        if (!aiResponse || typeof aiResponse.message !== 'string') {
+          throw new Error('Invalid AI response format');
+        }
+
+        const assistantMessage: ChatMessage = {
+          id: Date.now() + '-assistant',
+          role: 'assistant',
+          content: aiResponse.message,
+          structures: aiResponse.structures || [],
+          timestamp: new Date(),
+        };
+
+        console.log('Adding assistant message:', assistantMessage);
+        setMessages((prev) => [...prev, assistantMessage]);
+      } catch (error) {
+        console.error('AIAssistantPanel: Error occurred:', error);
+        const errorMessage: ChatMessage = {
+          id: Date.now() + '-error',
+          role: 'assistant',
+          content: `エラーが発生しました: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }\nしばらくしてからもう一度お試しください。`,
+          timestamp: new Date(),
+          structures: [],
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -500,6 +574,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   const handleAddStructure = async (structure: ChemicalStructure) => {
     try {
       console.log('handleAddStructure called with:', structure);
+
       const result = await structureGenerator.addStructuresToCanvas([
         structure,
       ]);
@@ -509,18 +584,47 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         console.log(
           `構造を追加しました: ${structure.label || structure.format}`,
         );
-        // 成功のフィードバックを表示
+
+        // 成功メッセージをチャットに追加
+        const successMessage: ChatMessage = {
+          id: Date.now() + '-success',
+          role: 'assistant',
+          content: `✅ 構造「${
+            structure.label || '化学構造'
+          }」をキャンバスに追加しました！`,
+          structures: [],
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, successMessage]);
       } else {
         console.error('構造の追加に失敗:', result.error);
-        console.error(`構造の追加に失敗しました: ${result.error}`);
+
+        // エラーメッセージをチャットに追加
+        const errorMessage: ChatMessage = {
+          id: Date.now() + '-error',
+          role: 'assistant',
+          content: `❌ 構造の追加に失敗しました: ${
+            result.error || '不明なエラー'
+          }`,
+          structures: [],
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
       }
     } catch (error) {
       console.error('構造追加エラー:', error);
-      console.error(
-        `エラーが発生しました: ${
+
+      // エラーメッセージをチャットに追加
+      const errorMessage: ChatMessage = {
+        id: Date.now() + '-error',
+        role: 'assistant',
+        content: `❌ エラーが発生しました: ${
           error instanceof Error ? error.message : 'Unknown error'
         }`,
-      );
+        structures: [],
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     }
   };
 
@@ -570,6 +674,20 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   const selectedModelConfig = availableModels.find(
     (model) => model.id === currentModel,
   );
+
+  console.log(
+    '📋 AIAssistantPanel rendering UI, isOpen:',
+    isOpen,
+    'messages count:',
+    messages.length,
+  );
+
+  // AI Assistant panel initialization
+  React.useEffect(() => {
+    if (isOpen) {
+      console.log('🎯 AI Assistant panel opened successfully');
+    }
+  }, [isOpen]);
 
   return (
     <>
@@ -643,15 +761,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
               </WelcomeMessage>
             )}
 
-            {(() => {
-              console.log('About to render messages:', messages);
-              console.log('messages is array:', Array.isArray(messages));
-              console.log(
-                'messages length:',
-                messages ? messages.length : 'undefined',
-              );
-              return messages.map(renderMessage);
-            })()}
+            {messages.map(renderMessage)}
 
             {isLoading && (
               <LoadingIndicator>

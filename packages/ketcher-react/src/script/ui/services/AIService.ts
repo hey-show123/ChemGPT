@@ -729,12 +729,26 @@ export class AIService {
    * AI応答のパース
    */
   private parseAIResponse(response: Record<string, unknown>): AIResponse {
-    return {
+    console.log('parseAIResponse called with:', response);
+    console.log('response.structures:', response.structures);
+    console.log('response.structures type:', typeof response.structures);
+    console.log(
+      'response.structures is array:',
+      Array.isArray(response.structures),
+    );
+
+    const result = {
       message: (response.message as string) || '',
       structures: (response.structures as ChemicalStructure[]) || [],
       suggestions: (response.suggestions as string[]) || [],
       success: true,
     };
+
+    console.log('parseAIResponse result:', result);
+    console.log('result.structures:', result.structures);
+    console.log('result.structures length:', result.structures?.length);
+
+    return result;
   }
 
   /**

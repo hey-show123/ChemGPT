@@ -284,6 +284,18 @@ const config: Record<string, UiAction> = {
     action: { dialog: 'info-modal' },
     hidden: (options) => isHidden(options, 'info-modal'),
   },
+  'ai-assistant': {
+    title: 'AI Assistant',
+    shortcut: 'Mod+Shift+i',
+    enabledInViewOnly: true,
+    action: {
+      thunk: async (dispatch) => {
+        const module = await import('../state/aiAssistant');
+        dispatch(module.openAIAssistant());
+      },
+    },
+    hidden: (options) => isHidden(options, 'ai-assistant'),
+  },
 };
 
 const configWithNonViewOnlyActionsDisabled: Tools = Object.entries({
