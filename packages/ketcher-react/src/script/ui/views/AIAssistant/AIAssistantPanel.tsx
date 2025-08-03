@@ -367,6 +367,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
   const [aiService] = useState(() => {
     try {
       return AIService.getInstance();
@@ -495,10 +496,18 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   };
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
       event.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+  };
+
+  const handleCompositionEnd = () => {
+    setIsComposing(false);
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
@@ -830,6 +839,8 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
                 placeholder="化学に関する質問をどうぞ... (例: アスピリンの構造を描いて)"
                 disabled={isLoading}
               />

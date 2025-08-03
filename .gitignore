@@ -10,7 +10,12 @@ node_modules
 
 # autotests
 .env
+/example/.env
 /ketcher-autotests/.env
+
+# API keys - prevent accidentally committing sensitive data
+/packages/ketcher-react/.env
+**/packages/ketcher-react/.env
 /ketcher-autotests/test-results/
 /ketcher-autotests/playwright-report/
 /ketcher-autotests/playwright/.cache/
