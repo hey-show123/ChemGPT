@@ -422,23 +422,43 @@ export class AIService {
     const basePrompt =
       'あなたは専門的な化学知識を持つChemGPTアシスタントです。化学構造の生成、分析、化学反応の予測を正確に行います。';
 
+    const negativePrompt = `
+
+重要な書式ルール:
+- マークダウン記号（*、**、#、>、-、バッククォートなど）は使用しないでください
+- 通常のプレーンテキストで回答してください
+- 強調したい場合は「」で囲むか、文章で表現してください`;
+
     switch (type) {
       case 'generate_structure':
         return (
           basePrompt +
+          negativePrompt +
           `
 
-優秀な科学者として化合物について説明してください。構造を提供する際は以下の形式で記載してください：
+化合物について詳しく説明してください。構造を提供する際は、説明の最後に以下のJSON形式で厳格に記載してください：
 
-SMILES: 化合物名: 構造式
+\`\`\`json
+{
+  "compound_name": "化合物名",
+  "smiles": "SMILES構造式"
+}
+\`\`\`
 
-例: SMILES: アスピリン: CC(=O)OC1=CC=CC=C1C(=O)O
+例:
+\`\`\`json
+{
+  "compound_name": "アスピリン",
+  "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"
+}
+\`\`\`
 
-注意: SMILES行はシステムが自動処理するため、チャットでは非表示になります。`
+重要: この形式を必ず守ってください。JSONブロックはシステムが自動処理します。`
         );
       case 'analyze_structure':
         return (
           basePrompt +
+          negativePrompt +
           `
 
 優秀な科学者として提供された化学構造について詳しく分析・説明してください。`
@@ -446,6 +466,7 @@ SMILES: 化合物名: 構造式
       default:
         return (
           basePrompt +
+          negativePrompt +
           `
 
 優秀な科学者として化学に関する質問に正確で分かりやすく回答してください。`
@@ -512,62 +533,59 @@ SMILES: 化合物名: 構造式
         break;
     }
 
-    // SMILES形式の構造を抽出（新形式対応: SMILES: 化合物名: 構造式）
-    const smilesMatches = content.match(
-      /SMILES:\s*([^:]+):\s*([A-Za-z0-9@+\-[\]()=#/.]+)/gi,
-    );
-
     const structures: ChemicalStructure[] = [];
-    if (
-      smilesMatches &&
-      (originalPayload.type as string) === 'generate_structure'
-    ) {
-      smilesMatches.forEach((match, index) => {
-        // 新形式から化合物名とSMILESを抽出
-        const parts = match.match(
-          /SMILES:\s*([^:]+):\s*([A-Za-z0-9@+\-[\]()=#/.]+)/i,
-        );
-        if (parts && parts.length >= 3) {
-          const compoundName = parts[1].trim();
-          const smilesData = parts[2].trim();
 
-          structures.push({
-            format: 'smiles',
-            data: smilesData,
-            label: compoundName || `構造 ${index + 1}`,
-            action: 'add',
-          });
-        }
-      });
-    }
+    if ((originalPayload.type as string) === 'generate_structure') {
+      // JSON形式の構造を抽出（最優先）
+      const jsonMatches = content.match(/```json\s*\n?([\s\S]*?)\n?```/gi);
 
-    // 旧形式も念のためサポート（後方互換性）
-    if (structures.length === 0) {
-      const oldFormatMatches = content.match(
-        /SMILES:\s*([A-Za-z0-9@+\-[\]()=#/.]+)/gi,
-      );
+      if (jsonMatches) {
+        jsonMatches.forEach((match, index) => {
+          try {
+            // JSON部分を抽出
+            const jsonContent = match
+              .replace(/```json\s*\n?/gi, '')
+              .replace(/\n?```/g, '');
+            const parsed = JSON.parse(jsonContent);
 
-      if (
-        oldFormatMatches &&
-        (originalPayload.type as string) === 'generate_structure'
-      ) {
-        oldFormatMatches.forEach((match, index) => {
-          const smilesData = match.replace(/SMILES:\s*/i, '').trim();
-          if (smilesData) {
-            // 旧形式では既存の抽出方法を使用
-            const compoundName = this.extractCompoundName(
-              content,
-              originalPayload.prompt as string,
-            );
-
-            structures.push({
-              format: 'smiles',
-              data: smilesData,
-              label: compoundName || `構造 ${index + 1}`,
-              action: 'add',
-            });
+            if (parsed.compound_name && parsed.smiles) {
+              structures.push({
+                format: 'smiles',
+                data: parsed.smiles.trim(),
+                label: parsed.compound_name.trim(),
+                action: 'add',
+              });
+            }
+          } catch (error) {
+            console.warn('JSON parsing failed for match:', match, error);
           }
         });
+      }
+
+      // 旧SMILES形式もサポート（後方互換性）
+      if (structures.length === 0) {
+        const smilesMatches = content.match(
+          /SMILES:\s*([^:]+):\s*([A-Za-z0-9@+\-[\]()=#/.]+)/gi,
+        );
+
+        if (smilesMatches) {
+          smilesMatches.forEach((match, index) => {
+            const parts = match.match(
+              /SMILES:\s*([^:]+):\s*([A-Za-z0-9@+\-[\]()=#/.]+)/i,
+            );
+            if (parts && parts.length >= 3) {
+              const compoundName = parts[1].trim();
+              const smilesData = parts[2].trim();
+
+              structures.push({
+                format: 'smiles',
+                data: smilesData,
+                label: compoundName || `構造 ${index + 1}`,
+                action: 'add',
+              });
+            }
+          });
+        }
       }
     }
 
@@ -738,13 +756,16 @@ SMILES: 化合物名: 構造式
    * メッセージからSMILES文字列やその他の構造データを除去してクリーンなテキストにする
    */
   private removeStructureDataFromMessage(content: string): string {
-    // 新形式のSMILES行を除去（SMILES: 化合物名: 構造式）
-    let cleanContent = content.replace(
+    let cleanContent = content;
+
+    // JSON形式の構造ブロックを除去
+    cleanContent = cleanContent.replace(/```json\s*\n?([\s\S]*?)\n?```/gi, '');
+
+    // 旧SMILES形式も除去（後方互換性）
+    cleanContent = cleanContent.replace(
       /SMILES:\s*[^:]+:\s*[A-Za-z0-9@+\-[\]()=#/.]+/gi,
       '',
     );
-
-    // 旧形式のSMILES行も除去（後方互換性）
     cleanContent = cleanContent.replace(
       /SMILES:\s*[A-Za-z0-9@+\-[\]()=#/.]+/gi,
       '',
@@ -823,7 +844,7 @@ SMILES: 化合物名: 構造式
     const responses = {
       アスピリン: {
         message:
-          'アスピリン（アセチルサリチル酸）の構造を生成しました。この化合物は解熱・鎮痛・抗炎症作用を持つ代表的なNSAIDです。',
+          'アスピリン（アセチルサリチル酸）は解熱・鎮痛・抗炎症作用を持つ代表的なNSAIDです。\n\n主な特徴\n- 解熱作用\n- 鎮痛作用\n- 抗炎症作用\n\n分子式: C9H8O4\n\n```json\n{\n  "compound_name": "アスピリン",\n  "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"\n}\n```',
         structures: [
           {
             format: 'smiles',
@@ -840,7 +861,7 @@ SMILES: 化合物名: 構造式
       },
       カフェイン: {
         message:
-          'カフェイン（1,3,7-トリメチルキサンチン）の構造を生成しました。中枢神経刺激作用を持つアルカロイドです。',
+          'カフェイン（1,3,7-トリメチルキサンチン）は中枢神経刺激作用を持つアルカロイドです。\n\n```json\n{\n  "compound_name": "カフェイン",\n  "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"\n}\n```',
         structures: [
           {
             format: 'smiles',
