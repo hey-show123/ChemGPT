@@ -9,8 +9,7 @@
     "ketcher-autotests",
     "example",
     "example-ssr",
-    "example-separate-editors",
-    "demo"
+    "example-separate-editors"
   ],
   "scripts": {
     "postinstall": "husky install",
@@ -25,14 +24,12 @@
     "build:macromolecules": "npm run build -w ketcher-macromolecules",
     "build:packages": "npm run build:core && run-p build:standalone build:react && npm run build:macromolecules",
     "build:example": "npm run build -w example",
-    "build:demo": "npm run build:packages && npm run build -w demo",
     "test": "npm run test --workspace=packages/ketcher-core --workspace=packages/ketcher-react --workspace=packages/ketcher-standalone --workspace=packages/ketcher-macromolecules",
     "test:types": "npm run test:types --workspaces",
     "check:autotests": "cd ketcher-autotests && npm run check:code",
     "serve:remote": "cd example && npm run serve:remote",
     "serve:standalone": "cd example && npm run serve:standalone",
-    "serve": "run-p serve:remote serve:standalone",
-    "serve:demo": "cd demo && npm run serve"
+    "serve": "run-p serve:remote serve:standalone"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.61.0",
