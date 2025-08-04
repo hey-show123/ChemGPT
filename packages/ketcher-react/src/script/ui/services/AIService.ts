@@ -540,7 +540,7 @@ export class AIService {
       const jsonMatches = content.match(/```json\s*\n?([\s\S]*?)\n?```/gi);
 
       if (jsonMatches) {
-        jsonMatches.forEach((match, index) => {
+        jsonMatches.forEach((match, _index) => {
           try {
             // JSON部分を抽出
             const jsonContent = match
