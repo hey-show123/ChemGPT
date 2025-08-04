@@ -712,47 +712,6 @@ export class AIService {
   }
 
   /**
-   * AI応答から化合物名を抽出する
-   */
-  private extractCompoundName(content: string, originalPrompt: string): string {
-    // パターン1: 括弧内の化合物名を抽出（例：「アスピリン（アセチルサリチル酸）」）
-    const bracketMatch = content.match(/([^\s（]+)（([^）]+)）/);
-    if (bracketMatch) {
-      return bracketMatch[1]; // 括弧前の名前を返す
-    }
-
-    // パターン2: 最初の行から化合物名を抽出
-    const firstLine = content.split('\n')[0];
-    const commonWords = ['は', 'の', 'が', 'を', 'に', 'で', 'と', '、', '。'];
-    let compoundName = firstLine;
-
-    // 一般的な助詞で区切って最初の単語を取得
-    for (const word of commonWords) {
-      const index = compoundName.indexOf(word);
-      if (index > 0) {
-        compoundName = compoundName.substring(0, index);
-        break;
-      }
-    }
-
-    // パターン3: 元のプロンプトから化合物名を推測
-    if (compoundName.length > 20 || !compoundName) {
-      // プロンプトから「の構造」「を描いて」などを除去
-      const cleanPrompt = originalPrompt
-        .replace(/の構造.*$/g, '')
-        .replace(/を描いて.*$/g, '')
-        .replace(/について.*$/g, '')
-        .trim();
-
-      if (cleanPrompt.length > 0 && cleanPrompt.length < 20) {
-        return cleanPrompt;
-      }
-    }
-
-    return compoundName.trim();
-  }
-
-  /**
    * メッセージからSMILES文字列やその他の構造データを除去してクリーンなテキストにする
    */
   private removeStructureDataFromMessage(content: string): string {
