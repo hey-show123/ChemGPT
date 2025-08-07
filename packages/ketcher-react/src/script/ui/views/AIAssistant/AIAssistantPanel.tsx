@@ -24,9 +24,8 @@ import AIService, {
   AIModelConfig,
 } from '../../services/AIService';
 import StructureGenerator from '../../services/StructureGenerator';
-import { Struct } from 'ketcher-core';
+import { Struct, RenderStruct, RenderOptions } from 'ketcher-core';
 import { parseStruct } from '../../state/shared';
-import { RenderStruct } from 'ketcher-core';
 import { useSelector } from 'react-redux';
 import { serverSelector } from '../../state/server/selectors';
 import { editorOptionsSelector } from '../../state/editor/selectors';
@@ -490,7 +489,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     }: {
       struct: Struct;
       uniqueId: string;
-      options: any;
+      options: RenderOptions;
     }) => {
       const containerRef = useRef<HTMLDivElement>(null);
       const [isRendered, setIsRendered] = useState(false);
