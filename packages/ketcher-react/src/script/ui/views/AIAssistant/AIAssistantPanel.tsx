@@ -14,7 +14,7 @@
  * limitations under the License.
  ***************************************************************************/
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import styled from '@emotion/styled';
 import { Icon } from '../../../../components';
 import AIService, {
@@ -25,8 +25,8 @@ import AIService, {
 } from '../../services/AIService';
 import StructureGenerator from '../../services/StructureGenerator';
 import { Struct } from 'ketcher-core';
-import StructRender from '../../../../components/StructRender/StructRender';
 import { parseStruct } from '../../state/shared';
+import { RenderStruct } from 'ketcher-core';
 import { useSelector } from 'react-redux';
 import { serverSelector } from '../../state/server/selectors';
 import { editorOptionsSelector } from '../../state/editor/selectors';
@@ -481,93 +481,172 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     aiService.setCurrentModel(newModel);
   };
 
-  // 構造プレビューコンポーネント
-  const StructurePreviewComponent = ({
-    structure,
-  }: {
-    structure: ChemicalStructure;
-  }) => {
-    const [parsedStruct, setParsedStruct] = useState<Struct | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  // 完全に独立した構造レンダリングコンポーネント
+  const IsolatedStructureRenderer = React.memo(
+    ({
+      struct,
+      uniqueId,
+      options,
+    }: {
+      struct: Struct;
+      uniqueId: string;
+      options: any;
+    }) => {
+      const containerRef = useRef<HTMLDivElement>(null);
+      const [isRendered, setIsRendered] = useState(false);
 
-    useEffect(() => {
-      if (structure.format === 'smiles' && structure.data) {
-        setLoading(true);
-        setError(null);
+      useEffect(() => {
+        const container = containerRef.current;
+        if (container && struct && !isRendered) {
+          try {
+            // コンテナを完全にクリア
+            container.innerHTML = '';
 
-        parseStruct(structure.data, server)
-          .then((struct) => {
-            setParsedStruct(struct);
-          })
-          .catch((err) => {
-            console.error('Structure parsing error:', err);
-            setError(err.message || 'Failed to parse structure');
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      } else {
-        setLoading(false);
-        setError('Unsupported structure format');
-      }
-    }, [structure.data, structure.format, server]);
+            // 構造の完全なクローンを作成（参照を切る）
+            const structClone = struct.clone();
 
-    if (loading) {
+            // 独立したレンダリングオプション
+            const renderOptions = {
+              ...options,
+              autoScale: true,
+              autoScaleMargin: 15,
+              needCache: false,
+              // レンダリング毎に異なるseedを使用
+              seed: `${uniqueId}-${Date.now()}`,
+            };
+
+            // RenderStructを直接使用して完全に独立したレンダリング
+            RenderStruct.render(container, structClone, renderOptions);
+            setIsRendered(true);
+
+            console.log(`独立レンダリング完了: ${uniqueId}`);
+          } catch (error) {
+            console.error(`レンダリングエラー ${uniqueId}:`, error);
+          }
+        }
+      }, [struct, uniqueId, options, isRendered]);
+
+      // クリーンアップでレンダリング状態をリセット
+      useEffect(() => {
+        return () => {
+          setIsRendered(false);
+          if (containerRef.current) {
+            containerRef.current.innerHTML = '';
+          }
+        };
+      }, []);
+
       return (
         <div
+          ref={containerRef}
+          id={`structure-container-${uniqueId}`}
+          key={`renderer-${uniqueId}`}
           style={{
             padding: '8px',
             border: '1px solid #ddd',
             borderRadius: '4px',
             backgroundColor: '#f9f9f9',
             height: '150px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            overflow: 'hidden',
           }}
-        >
-          <LoadingSpinner />
-        </div>
-      );
-    }
-
-    if (error || !parsedStruct) {
-      return (
-        <div
-          style={{
-            padding: '8px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            backgroundColor: '#f9f9f9',
-            height: '150px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ErrorMessage>{error || 'Failed to render structure'}</ErrorMessage>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        style={{
-          padding: '8px',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          backgroundColor: '#f9f9f9',
-          height: '150px',
-        }}
-      >
-        <StructRender
-          struct={parsedStruct}
-          options={{ ...editorOptions, autoScale: true, needCache: false }}
         />
-      </div>
-    );
-  };
+      );
+    },
+  );
+
+  // 構造プレビューコンポーネント - 各インスタンスを完全に独立化
+  const StructurePreviewComponent = React.memo(
+    ({
+      structure,
+      messageId,
+      structureIndex,
+    }: {
+      structure: ChemicalStructure;
+      messageId: string;
+      structureIndex: number;
+    }) => {
+      const [parsedStruct, setParsedStruct] = useState<Struct | null>(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState<string | null>(null);
+      const uniqueId = `struct-${messageId}-${structureIndex}`;
+
+      // 構造を一度だけパースして固定する
+      const structureData = useMemo(() => structure.data, [structure.data]);
+
+      useEffect(() => {
+        if (structure.format === 'smiles' && structureData) {
+          setLoading(true);
+          setError(null);
+
+          // 構造データを深いクローンで複製して独立性を保つ
+          const clonedData = JSON.parse(JSON.stringify(structureData));
+
+          parseStruct(clonedData, server)
+            .then((struct) => {
+              // パースされた構造も深いクローンで独立化
+              const clonedStruct = struct.clone();
+              setParsedStruct(clonedStruct);
+            })
+            .catch((err) => {
+              console.error(`Structure parsing error for ${uniqueId}:`, err);
+              setError(err.message || 'Failed to parse structure');
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+        } else {
+          setLoading(false);
+          setError('Unsupported structure format');
+        }
+      }, [structureData, structure.format, server, uniqueId]);
+
+      if (loading) {
+        return (
+          <div
+            style={{
+              padding: '8px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              backgroundColor: '#f9f9f9',
+              height: '150px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <LoadingSpinner />
+          </div>
+        );
+      }
+
+      if (error || !parsedStruct) {
+        return (
+          <div
+            style={{
+              padding: '8px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              backgroundColor: '#f9f9f9',
+              height: '150px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ErrorMessage>{error || 'Failed to render structure'}</ErrorMessage>
+          </div>
+        );
+      }
+
+      return (
+        <IsolatedStructureRenderer
+          struct={parsedStruct}
+          uniqueId={uniqueId}
+          options={editorOptions}
+        />
+      );
+    },
+  );
 
   const handleAddStructure = async (structure: ChemicalStructure) => {
     try {
@@ -628,12 +707,16 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
             message.structures.length > 0 && (
               <>
                 {message.structures.map((structure, index) => (
-                  <StructurePreview key={index}>
+                  <StructurePreview key={`${message.id}-${index}`}>
                     <div>
                       <strong>{structure.label || `構造 ${index + 1}`}</strong>
                     </div>
                     {structure.format === 'smiles' && (
-                      <StructurePreviewComponent structure={structure} />
+                      <StructurePreviewComponent
+                        structure={structure}
+                        messageId={message.id}
+                        structureIndex={index}
+                      />
                     )}
                     <StructureButton
                       onClick={() => handleAddStructure(structure)}
