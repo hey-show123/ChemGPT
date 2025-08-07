@@ -291,6 +291,12 @@ export class AIService {
     try {
       // 環境変数でモック使用を制御
       const useMock = String(process.env.REACT_APP_USE_MOCK_AI) === 'true';
+      console.log(
+        'Mock AI setting:',
+        process.env.REACT_APP_USE_MOCK_AI,
+        'useMock:',
+        useMock,
+      );
 
       if (useMock) {
         return await this.getMockResponse(payload);
@@ -536,8 +542,11 @@ export class AIService {
     const structures: ChemicalStructure[] = [];
 
     if ((originalPayload.type as string) === 'generate_structure') {
+      console.log('Processing generate_structure response:', content);
+
       // JSON形式の構造を抽出（最優先）
       const jsonMatches = content.match(/```json\s*\n?([\s\S]*?)\n?```/gi);
+      console.log('JSON matches found:', jsonMatches);
 
       if (jsonMatches) {
         jsonMatches.forEach((match, _index) => {
@@ -546,15 +555,19 @@ export class AIService {
             const jsonContent = match
               .replace(/```json\s*\n?/gi, '')
               .replace(/\n?```/g, '');
+            console.log('Extracted JSON content:', jsonContent);
             const parsed = JSON.parse(jsonContent);
+            console.log('Parsed JSON:', parsed);
 
             if (parsed.compound_name && parsed.smiles) {
-              structures.push({
-                format: 'smiles',
+              const structure = {
+                format: 'smiles' as const,
                 data: parsed.smiles.trim(),
                 label: parsed.compound_name.trim(),
-                action: 'add',
-              });
+                action: 'add' as const,
+              };
+              console.log('Adding structure:', structure);
+              structures.push(structure);
             }
           } catch (error) {
             console.warn('JSON parsing failed for match:', match, error);
@@ -589,8 +602,12 @@ export class AIService {
       }
     }
 
-    // チャット表示用にSMILES文字列を除去したクリーンなメッセージを作成
-    const cleanMessage = this.removeStructureDataFromMessage(content);
+    // チャット表示用にJSON部分だけを削除
+    let cleanMessage = content;
+
+    // ```json```ブロックを削除
+    const jsonBlockRegex = /```json[\s\S]*?```/gi;
+    cleanMessage = cleanMessage.replace(jsonBlockRegex, '').trim();
 
     // 賢い提案を生成
     const suggestions = this.generateSmartSuggestions(
@@ -712,34 +729,6 @@ export class AIService {
   }
 
   /**
-   * メッセージからSMILES文字列やその他の構造データを除去してクリーンなテキストにする
-   */
-  private removeStructureDataFromMessage(content: string): string {
-    let cleanContent = content;
-
-    // JSON形式の構造ブロックを除去
-    cleanContent = cleanContent.replace(/```json\s*\n?([\s\S]*?)\n?```/gi, '');
-
-    // 旧SMILES形式も除去（後方互換性）
-    cleanContent = cleanContent.replace(
-      /SMILES:\s*[^:]+:\s*[A-Za-z0-9@+\-[\]()=#/.]+/gi,
-      '',
-    );
-    cleanContent = cleanContent.replace(
-      /SMILES:\s*[A-Za-z0-9@+\-[\]()=#/.]+/gi,
-      '',
-    );
-
-    // 連続する改行を整理
-    cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n');
-
-    // 先頭と末尾の空白を除去
-    cleanContent = cleanContent.trim();
-
-    return cleanContent;
-  }
-
-  /**
    * 開発用モックレスポンス
    */
   private getMockResponse(
@@ -784,6 +773,14 @@ export class AIService {
             };
           }
 
+          // モックレスポンスでもJSONブロックを削除
+          if (response.message) {
+            const cleanMessage = String(response.message)
+              .replace(/```json[\s\S]*?```/gi, '')
+              .trim();
+            response.message = cleanMessage;
+          }
+
           resolve(response);
         } catch (error) {
           console.error('AIService.getMockResponse - ERROR in timeout:', error);
@@ -803,7 +800,7 @@ export class AIService {
     const responses = {
       アスピリン: {
         message:
-          'アスピリン（アセチルサリチル酸）は解熱・鎮痛・抗炎症作用を持つ代表的なNSAIDです。\n\n主な特徴\n- 解熱作用\n- 鎮痛作用\n- 抗炎症作用\n\n分子式: C9H8O4\n\n```json\n{\n  "compound_name": "アスピリン",\n  "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"\n}\n```',
+          'アスピリン（アセチルサリチル酸）は解熱・鎮痛・抗炎症作用を持つ代表的なNSAIDです。\n\n主な特徴：\n- 解熱作用\n- 鎮痛作用\n- 抗炎症作用\n- COX-1, COX-2酵素の阻害\n\nサリチル酸誘導体として医薬品に広く使用されています。\n\n```json\n{\n  "compound_name": "アスピリン",\n  "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"\n}\n```',
         structures: [
           {
             format: 'smiles',
@@ -820,7 +817,7 @@ export class AIService {
       },
       カフェイン: {
         message:
-          'カフェイン（1,3,7-トリメチルキサンチン）は中枢神経刺激作用を持つアルカロイドです。\n\n```json\n{\n  "compound_name": "カフェイン",\n  "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"\n}\n```',
+          'カフェイン（1,3,7-トリメチルキサンチン）は中枢神経刺激作用を持つアルカロイドです。\n\n主な特徴：\n- 中枢神経刺激作用\n- アデノシン受容体拮抗\n- 覚醒作用と集中力向上\n- 利尿作用\n\nコーヒー、茶、コーラなどに含まれる天然の精神活性物質です。\n\n```json\n{\n  "compound_name": "カフェイン",\n  "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"\n}\n```',
         structures: [
           {
             format: 'smiles',
@@ -834,6 +831,66 @@ export class AIService {
           'プリン骨格について',
           'メチル化の意味',
         ],
+      },
+      ベンゼン: {
+        message:
+          'ベンゼン（C6H6）は最も基本的な芳香族化合物です。\n\n主な特徴：\n- 6員環の芳香族化合物\n- 共鳴安定化により安定\n- 多くの芳香族化合物の基本骨格\n- 工業的に重要な溶媒・原料\n\n芳香族性により特異な反応性を示し、有機化学の基礎となる化合物です。\n\n```json\n{\n  "compound_name": "ベンゼン",\n  "smiles": "c1ccccc1"\n}\n```',
+        structures: [
+          {
+            format: 'smiles',
+            data: 'c1ccccc1',
+            label: 'ベンゼン',
+            action: 'add',
+          },
+        ],
+        suggestions: [
+          '芳香族性について',
+          'ベンゼンの反応性',
+          '置換ベンゼンの例',
+        ],
+      },
+      エタノール: {
+        message:
+          'エタノール（エチルアルコール）は最も一般的なアルコール系溶媒です。\n\n主な特徴：\n- 親水性と親油性を併せ持つ\n- 殺菌・消毒作用\n- 飲料用アルコール\n- 工業溶媒として重要\n\n発酵により天然に生成される化合物です。\n\n```json\n{\n  "compound_name": "エタノール",\n  "smiles": "CCO"\n}\n```',
+        structures: [
+          {
+            format: 'smiles',
+            data: 'CCO',
+            label: 'エタノール',
+            action: 'add',
+          },
+        ],
+        suggestions: [
+          'アルコール類の性質',
+          'エタノールの用途',
+          '他のアルコール化合物',
+        ],
+      },
+      メタン: {
+        message:
+          'メタン（CH4）は最も単純な炭化水素化合物です。\n\n主な特徴：\n- 正四面体構造\n- 天然ガスの主成分\n- 温室効果ガス\n- 化学工業の重要原料\n\n地球上で最も豊富な有機化合物の一つです。\n\n```json\n{\n  "compound_name": "メタン",\n  "smiles": "C"\n}\n```',
+        structures: [
+          {
+            format: 'smiles',
+            data: 'C',
+            label: 'メタン',
+            action: 'add',
+          },
+        ],
+        suggestions: ['アルカン類について', '天然ガスの構成', '炭化水素の基礎'],
+      },
+      水: {
+        message:
+          '水（H2O）は生命にとって不可欠な化合物です。\n\n主な特徴：\n- 極性分子\n- 水素結合による特異な性質\n- 優れた溶媒\n- 高い比熱と潜熱\n\n地球上の生命活動の基盤となる化合物です。\n\n```json\n{\n  "compound_name": "水",\n  "smiles": "O"\n}\n```',
+        structures: [
+          {
+            format: 'smiles',
+            data: 'O',
+            label: '水',
+            action: 'add',
+          },
+        ],
+        suggestions: ['水の特異な性質', '溶媒としての水', '生体内での水の役割'],
       },
     };
 
@@ -850,7 +907,13 @@ export class AIService {
         prompt || '不明'
       }」について化学構造を検索しています。具体的な化合物名を教えていただけますか？`,
       structures: [],
-      suggestions: ['アスピリンの構造', 'カフェインの構造', 'ベンゼンの構造'],
+      suggestions: [
+        'アスピリンの構造',
+        'カフェインの構造',
+        'ベンゼンの構造',
+        'エタノールの構造',
+        'メタンの構造',
+      ],
     };
   }
 

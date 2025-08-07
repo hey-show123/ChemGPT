@@ -191,6 +191,29 @@ const StructureButton = styled.button`
   }
 `;
 
+const SuggestionContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+`;
+
+const SuggestionButton = styled.button`
+  padding: 4px 8px;
+  background-color: transparent;
+  color: #167782;
+  border: 1px solid #167782;
+  border-radius: 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #167782;
+    color: white;
+  }
+`;
+
 const InputContainer = styled.div`
   padding: 16px 20px;
   border-top: 1px solid #e8e8e8;
@@ -278,7 +301,7 @@ const WelcomeIcon = styled.div`
   svg {
     width: 120px;
     height: 120px;
-    color: #c0c0c0;
+    color: #167782;
     margin-bottom: 20px;
   }
 `;
@@ -286,7 +309,7 @@ const WelcomeIcon = styled.div`
 const WelcomeTitle = styled.h1`
   font-size: 48px;
   font-weight: 700;
-  color: #c0c0c0;
+  color: #333;
   margin: 0;
   font-family: 'Arial', sans-serif;
   letter-spacing: -1px;
@@ -430,10 +453,6 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         throw new Error('Invalid AI response format');
       }
 
-      // デバッグログを追加
-      console.log('AI Response:', aiResponse);
-      console.log('Structures:', aiResponse.structures);
-
       const assistantMessage: ChatMessage = {
         id: Date.now() + '-assistant',
         role: 'assistant',
@@ -473,6 +492,67 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
   const handleCompositionEnd = () => {
     setIsComposing(false);
+  };
+
+  const handleSuggestionClick = async (suggestion: string) => {
+    setInputValue(suggestion);
+
+    // 自動的にメッセージを送信
+    if (!isLoading) {
+      const userMessage: ChatMessage = {
+        id: Date.now() + '-user',
+        role: 'user',
+        content: suggestion,
+        timestamp: new Date(),
+        structures: [],
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+      setInputValue('');
+      setIsLoading(true);
+
+      try {
+        let aiResponse;
+        if (suggestion.includes('分析')) {
+          const currentStructure =
+            structureGenerator.getCurrentStructureAsKet();
+          aiResponse = await aiService.analyzeStructure(
+            currentStructure || '',
+            suggestion,
+          );
+        } else {
+          aiResponse = await aiService.generateStructure(suggestion);
+        }
+
+        if (!aiResponse || typeof aiResponse.message !== 'string') {
+          throw new Error('Invalid AI response format');
+        }
+
+        const assistantMessage: ChatMessage = {
+          id: Date.now() + '-assistant',
+          role: 'assistant',
+          content: aiResponse.message,
+          structures: aiResponse.structures || [],
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+      } catch (error) {
+        console.error('AIAssistantPanel (suggestion): Error occurred:', error);
+        const errorMessage: ChatMessage = {
+          id: Date.now() + '-error',
+          role: 'assistant',
+          content: `エラーが発生しました: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }\nしばらくしてからもう一度お試しください。`,
+          timestamp: new Date(),
+          structures: [],
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -690,307 +770,40 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
           <ChatContainer ref={chatContainerRef}>
             {showWelcome && (
               <WelcomeMessage>
-                <WelcomeIcon>
-                  <svg
-                    width="120"
-                    height="120"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                <h4>ChemGPT AI アシスタントへようこそ</h4>
+                <p>化学構造の描画と分析をAIがサポートします</p>
+
+                <FeatureList>
+                  <li>構造式の自動生成</li>
+                  <li>化合物の性質予測</li>
+                  <li>反応経路の提案</li>
+                  <li>SMILES/IUPACの変換</li>
+                  <li>構造の最適化</li>
+                </FeatureList>
+
+                <SuggestionContainer>
+                  <SuggestionButton
+                    onClick={() =>
+                      handleSuggestionClick('アスピリンの構造を描いて')
+                    }
                   >
-                    {/* Perfect benzene ring with 6-fold rotational symmetry */}
-                    <polygon
-                      points="12,3 17.196,6 17.196,12 12,15 6.804,12 6.804,6"
-                      stroke="currentColor"
-                      strokeWidth="0.8"
-                      fill="none"
-                    />
-                    <polygon
-                      points="12,4.5 16.062,6.75 16.062,11.25 12,13.5 7.938,11.25 7.938,6.75"
-                      stroke="currentColor"
-                      strokeWidth="0.5"
-                      fill="none"
-                    />
-
-                    {/* Perfect 6-fold symmetric molecular nodes - equal distances from center */}
-                    <circle cx="12" cy="0.5" r="0.6" fill="currentColor" />
-                    <circle cx="19.7" cy="5.25" r="0.6" fill="currentColor" />
-                    <circle cx="19.7" cy="12.75" r="0.6" fill="currentColor" />
-                    <circle cx="12" cy="17.5" r="0.6" fill="currentColor" />
-                    <circle cx="4.3" cy="12.75" r="0.6" fill="currentColor" />
-                    <circle cx="4.3" cy="5.25" r="0.6" fill="currentColor" />
-
-                    {/* Extended network - equal distances */}
-                    <circle cx="12" cy="0" r="0.3" fill="currentColor" />
-                    <circle cx="20.784" cy="4.5" r="0.3" fill="currentColor" />
-                    <circle cx="20.784" cy="13.5" r="0.3" fill="currentColor" />
-                    <circle cx="12" cy="18" r="0.3" fill="currentColor" />
-                    <circle cx="3.216" cy="13.5" r="0.3" fill="currentColor" />
-                    <circle cx="3.216" cy="4.5" r="0.3" fill="currentColor" />
-
-                    {/* Radial connections - all equal lengths */}
-                    <line
-                      x1="12"
-                      y1="3"
-                      x2="12"
-                      y2="0.5"
-                      stroke="currentColor"
-                      strokeWidth="0.4"
-                    />
-                    <line
-                      x1="12"
-                      y1="0.5"
-                      x2="12"
-                      y2="0"
-                      stroke="currentColor"
-                      strokeWidth="0.3"
-                    />
-
-                    <line
-                      x1="17.196"
-                      y1="6"
-                      x2="19.7"
-                      y2="5.25"
-                      stroke="currentColor"
-                      strokeWidth="0.4"
-                    />
-                    <line
-                      x1="19.7"
-                      y1="5.25"
-                      x2="20.784"
-                      y2="4.5"
-                      stroke="currentColor"
-                      strokeWidth="0.3"
-                    />
-
-                    <line
-                      x1="17.196"
-                      y1="12"
-                      x2="19.7"
-                      y2="12.75"
-                      stroke="currentColor"
-                      strokeWidth="0.4"
-                    />
-                    <line
-                      x1="19.7"
-                      y1="12.75"
-                      x2="20.784"
-                      y2="13.5"
-                      stroke="currentColor"
-                      strokeWidth="0.3"
-                    />
-
-                    <line
-                      x1="12"
-                      y1="15"
-                      x2="12"
-                      y2="17.5"
-                      stroke="currentColor"
-                      strokeWidth="0.4"
-                    />
-                    <line
-                      x1="12"
-                      y1="17.5"
-                      x2="12"
-                      y2="18"
-                      stroke="currentColor"
-                      strokeWidth="0.3"
-                    />
-
-                    <line
-                      x1="6.804"
-                      y1="12"
-                      x2="4.3"
-                      y2="12.75"
-                      stroke="currentColor"
-                      strokeWidth="0.4"
-                    />
-                    <line
-                      x1="4.3"
-                      y1="12.75"
-                      x2="3.216"
-                      y2="13.5"
-                      stroke="currentColor"
-                      strokeWidth="0.3"
-                    />
-
-                    <line
-                      x1="6.804"
-                      y1="6"
-                      x2="4.3"
-                      y2="5.25"
-                      stroke="currentColor"
-                      strokeWidth="0.4"
-                    />
-                    <line
-                      x1="4.3"
-                      y1="5.25"
-                      x2="3.216"
-                      y2="4.5"
-                      stroke="currentColor"
-                      strokeWidth="0.3"
-                    />
-
-                    {/* Perfect 6-fold symmetric hexagon connections */}
-                    <line
-                      x1="12"
-                      y1="0.5"
-                      x2="19.7"
-                      y2="5.25"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.4"
-                    />
-                    <line
-                      x1="19.7"
-                      y1="5.25"
-                      x2="19.7"
-                      y2="12.75"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.4"
-                    />
-                    <line
-                      x1="19.7"
-                      y1="12.75"
-                      x2="12"
-                      y2="17.5"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.4"
-                    />
-                    <line
-                      x1="12"
-                      y1="17.5"
-                      x2="4.3"
-                      y2="12.75"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.4"
-                    />
-                    <line
-                      x1="4.3"
-                      y1="12.75"
-                      x2="4.3"
-                      y2="5.25"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.4"
-                    />
-                    <line
-                      x1="4.3"
-                      y1="5.25"
-                      x2="12"
-                      y2="0.5"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.4"
-                    />
-
-                    {/* Inner benzene hexagon connections */}
-                    <line
-                      x1="17.196"
-                      y1="6"
-                      x2="17.196"
-                      y2="12"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.3"
-                    />
-                    <line
-                      x1="17.196"
-                      y1="12"
-                      x2="12"
-                      y2="15"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.3"
-                    />
-                    <line
-                      x1="12"
-                      y1="15"
-                      x2="6.804"
-                      y2="12"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.3"
-                    />
-                    <line
-                      x1="6.804"
-                      y1="12"
-                      x2="6.804"
-                      y2="6"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.3"
-                    />
-                    <line
-                      x1="6.804"
-                      y1="6"
-                      x2="12"
-                      y2="3"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.3"
-                    />
-                    <line
-                      x1="12"
-                      y1="3"
-                      x2="17.196"
-                      y2="6"
-                      stroke="currentColor"
-                      strokeWidth="0.2"
-                      opacity="0.3"
-                    />
-
-                    {/* Central AI processing hub - perfectly centered */}
-                    <circle
-                      cx="12"
-                      cy="9"
-                      r="1.5"
-                      fill="currentColor"
-                      opacity="0.6"
-                    />
-                    <circle
-                      cx="12"
-                      cy="9"
-                      r="1"
-                      fill="currentColor"
-                      opacity="0.4"
-                    />
-                    <circle cx="12" cy="9" r="0.5" fill="currentColor" />
-
-                    {/* Orbital paths - concentric and symmetric */}
-                    <circle
-                      cx="12"
-                      cy="9"
-                      r="2.5"
-                      stroke="currentColor"
-                      strokeWidth="0.15"
-                      fill="none"
-                      opacity="0.3"
-                    />
-                    <circle
-                      cx="12"
-                      cy="9"
-                      r="4"
-                      stroke="currentColor"
-                      strokeWidth="0.1"
-                      fill="none"
-                      opacity="0.2"
-                    />
-                    <circle
-                      cx="12"
-                      cy="9"
-                      r="5.5"
-                      stroke="currentColor"
-                      strokeWidth="0.08"
-                      fill="none"
-                      opacity="0.15"
-                    />
-                  </svg>
-                </WelcomeIcon>
-                <WelcomeTitle>ChemGPT</WelcomeTitle>
+                    アスピリンの構造
+                  </SuggestionButton>
+                  <SuggestionButton
+                    onClick={() =>
+                      handleSuggestionClick('カフェインの構造を描いて')
+                    }
+                  >
+                    カフェインの構造
+                  </SuggestionButton>
+                  <SuggestionButton
+                    onClick={() =>
+                      handleSuggestionClick('現在の構造を分析して')
+                    }
+                  >
+                    構造解析
+                  </SuggestionButton>
+                </SuggestionContainer>
               </WelcomeMessage>
             )}
 
@@ -1009,7 +822,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
               <TextInput
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyPress}
+                onKeyPress={handleKeyPress}
                 onCompositionStart={handleCompositionStart}
                 onCompositionEnd={handleCompositionEnd}
                 placeholder="化学に関する質問をどうぞ... (例: アスピリンの構造を描いて)"
